@@ -109,10 +109,6 @@ jobs:
         with:
           name: externalip-manager.aarch64-unknown-linux-gnu
           path: target/linux/arm64/externalip-manager
-      - name: Display artifacts
-        run: |
-            ls -la target/linux
-            ls -la target/linux/*
 
       - name: Login to GHCR
         uses: docker/login-action@v3
