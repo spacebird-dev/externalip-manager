@@ -2,12 +2,12 @@ use std::{fmt::Debug, net::IpAddr};
 
 use itertools::Itertools;
 use k8s_openapi::api::core::v1::Service;
-use sources::{DnsHostname, IpSolver, LoadBalancerIngress, Source};
+use solvers::{DnsHostname, IpSolver, LoadBalancerIngress, Source};
 use tracing::{error, info, instrument};
 
 use crate::crd::v1alpha1::{self, CLUSTER_EXTERNAL_IP_SOURCE_KIND};
 
-mod sources;
+mod solvers;
 
 #[derive(Debug, thiserror::Error)]
 #[error("Failed to query address source: {msg}")]
@@ -178,29 +178,29 @@ impl SourceList {
     }
 }
 
-impl TryFrom<v1alpha1::IpSourcesConfig> for SourceList {
+impl TryFrom<v1alpha1::IpSolversConfig> for SourceList {
     type Error = SourceError;
 
-    fn try_from(value: v1alpha1::IpSourcesConfig) -> Result<Self, Self::Error> {
-        if value.sources.is_empty() {
+    fn try_from(value: v1alpha1::IpSolversConfig) -> Result<Self, Self::Error> {
+        if value.solvers.is_empty() {
             return Err(SourceError {
                 msg: "Sources list is empty".to_string(),
             });
         }
         let sources: Vec<Box<dyn Source>> = value
-            .sources
+            .solvers
             .iter()
             .map(|s| match s {
-                v1alpha1::SourceKind::IPSolver(ip_solver) => {
+                v1alpha1::SolverKind::IpAPI(ip_solver) => {
                     let boxed: Box<dyn Source> = Box::new(IpSolver::new(ip_solver.provider));
                     boxed
                 }
-                v1alpha1::SourceKind::DnsHostname(dns_hostname) => {
+                v1alpha1::SolverKind::DnsHostname(dns_hostname) => {
                     let boxed: Box<dyn Source> =
                         Box::new(DnsHostname::new(dns_hostname.host.clone()));
                     boxed
                 }
-                v1alpha1::SourceKind::LoadBalancerIngress(_) => {
+                v1alpha1::SolverKind::LoadBalancerIngress(_) => {
                     let boxed: Box<dyn Source> = Box::new(LoadBalancerIngress::new());
                     boxed
                 }

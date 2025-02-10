@@ -21,17 +21,17 @@ spec:
           spec:
             properties:
               ipv4:
-                description: Configure sources for Ipv4 addresses
+                description: Configure solvers for Ipv4 addresses
                 nullable: true
                 properties:
                   queryMode:
-                    description: How the list of sources should be queried. Can be "firstFound" (default) or "all". "firstFound" will query sources until one succeeds and return only the addresses from this query. "all" will query all sources and return all found addresses.
+                    description: How the list of solvers should be queried. Can be "firstFound" (default) or "all". "firstFound" will query solvers until one succeeds and return only the addresses from this query. "all" will query all solvers and return all found addresses.
                     enum:
                     - firstFound
                     - all
                     nullable: true
                     type: string
-                  sources:
+                  solvers:
                     default: []
                     items:
                       oneOf:
@@ -69,17 +69,17 @@ spec:
                     type: array
                 type: object
               ipv6:
-                description: Configure sources for Ipv6 addresses
+                description: Configure solvers for Ipv6 addresses
                 nullable: true
                 properties:
                   queryMode:
-                    description: How the list of sources should be queried. Can be "firstFound" (default) or "all". "firstFound" will query sources until one succeeds and return only the addresses from this query. "all" will query all sources and return all found addresses.
+                    description: How the list of solvers should be queried. Can be "firstFound" (default) or "all". "firstFound" will query solvers until one succeeds and return only the addresses from this query. "all" will query all solvers and return all found addresses.
                     enum:
                     - firstFound
                     - all
                     nullable: true
                     type: string
-                  sources:
+                  solvers:
                     default: []
                     items:
                       oneOf:

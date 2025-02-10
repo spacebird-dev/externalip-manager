@@ -6,11 +6,11 @@ use k8s_openapi::api::core::v1::Service;
 use super::{AddressKind, SourceError};
 
 mod dns_hostname;
-mod ip_solver;
+mod ip_api;
 mod load_balancer_ingress;
 
 pub use dns_hostname::DnsHostname;
-pub use ip_solver::IpSolver;
+pub use ip_api::IpSolver;
 pub use load_balancer_ingress::LoadBalancerIngress;
 
 /// A Source provides a list of externalIP addresses to be processed and applied

@@ -14,24 +14,24 @@ pub const CLUSTER_EXTERNAL_IP_SOURCE_KIND: &str = "ClusterExternalIPSource";
 )]
 #[serde(rename_all = "camelCase")]
 pub struct ClusterExternalIpSourceSpec {
-    /// Configure sources for Ipv4 addresses
+    /// Configure solvers for Ipv4 addresses
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub ipv4: Option<IpSourcesConfig>,
-    /// Configure sources for Ipv6 addresses
+    pub ipv4: Option<IpSolversConfig>,
+    /// Configure solvers for Ipv6 addresses
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub ipv6: Option<IpSourcesConfig>,
+    pub ipv6: Option<IpSolversConfig>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct IpSourcesConfig {
-    /// How the list of sources should be queried. Can be "firstFound" (default) or "all".
-    /// "firstFound" will query sources until one succeeds and return only the addresses from this query.
-    /// "all" will query all sources and return all found addresses.
+pub struct IpSolversConfig {
+    /// How the list of solvers should be queried. Can be "firstFound" (default) or "all".
+    /// "firstFound" will query solvers until one succeeds and return only the addresses from this query.
+    /// "all" will query all solvers and return all found addresses.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub query_mode: Option<QueryMode>,
     #[serde(default)]
-    pub sources: Vec<SourceKind>,
+    pub solvers: Vec<SolverKind>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Copy, Debug, JsonSchema, Default)]
@@ -44,10 +44,10 @@ pub enum QueryMode {
 
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
 #[serde(rename_all = "camelCase")]
-pub enum SourceKind {
+pub enum SolverKind {
     /// Use a public "What-is-my-ip"-style service to deduce external IP addresses
     #[serde(rename = "ipSolver")]
-    IPSolver(IpSolverConfig),
+    IpAPI(IpAPIConfig),
     /// Resolve a hostname through DNS and return the resulting A/AAAA records as IP addresses
     DnsHostname(DnsHostnameConfig),
     /// Use the ingress addresses assigned to the service in .status.loadBalancer.ingress as external IP addresses
@@ -63,7 +63,7 @@ pub struct DnsHostnameConfig {
 
 #[derive(Deserialize, Serialize, Copy, Clone, Debug, JsonSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct IpSolverConfig {
+pub struct IpAPIConfig {
     /// The service to use for retrieving public IP information
     pub provider: IpSolverProvider,
 }
