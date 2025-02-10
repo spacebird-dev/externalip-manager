@@ -183,10 +183,7 @@ impl Manager {
                 continue;
             }
 
-            let resolved_ip_strings = resolved_ips
-                .iter()
-                .map(|addr| addr.to_string())
-                .collect_vec();
+            let resolved_ip_strings = new_ip_set.iter().map(|addr| addr.to_string()).collect_vec();
             let api: Api<Service> = Api::namespaced(self.client.clone(), &svc_namespace);
             match api
                 .patch(
