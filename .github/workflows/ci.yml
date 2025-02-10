@@ -108,7 +108,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: externalip-manager.aarch64-unknown-linux-gnu
-          path: target/linux/adm64/externalip-manager
+          path: target/linux/amd64/externalip-manager
 
       - name: Login to GHCR
         uses: docker/login-action@v3
