@@ -18,7 +18,7 @@ repos:
       - id: generate-crds
         language: system
         pass_filenames: false
-        files: ^crates/manager/src/crd
+        files: ^(crates/manager/src/crd|crds)
         name: generate-crds
         entry: bash -c 'cargo run -p externalip-manager-crd-exporter crds/v1alpha1'
 
