@@ -1,0 +1,29 @@
+[package]
+name = "externalip-manager-manager"
+version = "0.1.0"
+edition = "2021"
+description = "Main ExternalIP Operator Library"
+
+
+[dependencies]
+reqwest = { version = "0.12.12", default-features = false, features = [
+    "rustls-tls",
+    "http2",
+    "charset",
+    "json",
+] }
+async-trait = "0.1.86"
+hickory-resolver = "0.24.3"
+itertools = "0.14.0"
+k8s-openapi = { version = "0.24.0", features = ["schemars"] }
+kube = { version = "0.98.0", features = ["runtime", "derive"] }
+schemars = "0.8.21"
+serde = { version = "1.0.217", features = ["derive"] }
+serde_json = "1.0.138"
+thiserror = "2.0.11"
+tokio = { version = "1.43.0", features = ["full"] }
+tracing = "0.1.41"
+
+[dev-dependencies]
+# we do enable a specific version for dev, so that tests can run
+k8s-openapi = { version = "0.24.0", features = ["schemars", "v1_28"] }

@@ -1,0 +1,126 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: clusterexternalipsources.externalip.spacebird.dev
+spec:
+  group: externalip.spacebird.dev
+  names:
+    categories: []
+    kind: ClusterExternalIPSource
+    plural: clusterexternalipsources
+    shortNames: []
+    singular: clusterexternalipsource
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns: []
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Cluster-Wide source of external IP addresses for a given service
+        properties:
+          spec:
+            properties:
+              ipv4:
+                description: Configure sources for Ipv4 addresses
+                nullable: true
+                properties:
+                  queryMode:
+                    description: How the list of sources should be queried. Can be "firstFound" (default) or "all". "firstFound" will query sources until one succeeds and return only the addresses from this query. "all" will query all sources and return all found addresses.
+                    enum:
+                    - firstFound
+                    - all
+                    nullable: true
+                    type: string
+                  sources:
+                    default: []
+                    items:
+                      oneOf:
+                      - required:
+                        - ipSolver
+                      - required:
+                        - dnsHostname
+                      - required:
+                        - loadBalancerIngress
+                      properties:
+                        dnsHostname:
+                          description: Resolve a hostname through DNS and return the resulting A/AAAA records as IP addresses
+                          properties:
+                            host:
+                              description: The host to resolve.
+                              type: string
+                          required:
+                          - host
+                          type: object
+                        ipSolver:
+                          description: Use a public "What-is-my-ip"-style service to deduce external IP addresses
+                          properties:
+                            provider:
+                              description: The service to use for retrieving public IP information
+                              enum:
+                              - myIp
+                              type: string
+                          required:
+                          - provider
+                          type: object
+                        loadBalancerIngress:
+                          description: Use the ingress addresses assigned to the service in .status.loadBalancer.ingress as external IP addresses
+                          type: object
+                      type: object
+                    type: array
+                type: object
+              ipv6:
+                description: Configure sources for Ipv6 addresses
+                nullable: true
+                properties:
+                  queryMode:
+                    description: How the list of sources should be queried. Can be "firstFound" (default) or "all". "firstFound" will query sources until one succeeds and return only the addresses from this query. "all" will query all sources and return all found addresses.
+                    enum:
+                    - firstFound
+                    - all
+                    nullable: true
+                    type: string
+                  sources:
+                    default: []
+                    items:
+                      oneOf:
+                      - required:
+                        - ipSolver
+                      - required:
+                        - dnsHostname
+                      - required:
+                        - loadBalancerIngress
+                      properties:
+                        dnsHostname:
+                          description: Resolve a hostname through DNS and return the resulting A/AAAA records as IP addresses
+                          properties:
+                            host:
+                              description: The host to resolve.
+                              type: string
+                          required:
+                          - host
+                          type: object
+                        ipSolver:
+                          description: Use a public "What-is-my-ip"-style service to deduce external IP addresses
+                          properties:
+                            provider:
+                              description: The service to use for retrieving public IP information
+                              enum:
+                              - myIp
+                              type: string
+                          required:
+                          - provider
+                          type: object
+                        loadBalancerIngress:
+                          description: Use the ingress addresses assigned to the service in .status.loadBalancer.ingress as external IP addresses
+                          type: object
+                      type: object
+                    type: array
+                type: object
+            type: object
+        required:
+        - spec
+        title: ClusterExternalIPSource
+        type: object
+    served: true
+    storage: true
+    subresources: {}

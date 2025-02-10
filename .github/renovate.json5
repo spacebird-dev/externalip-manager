@@ -1,0 +1,18 @@
+{
+    "extends": [
+        "github>spacebird-dev/.github:renovate-config"
+    ],
+    // See https://kube.rs/upgrading/#renovate
+    "packageRules": [
+        {
+            "matchPackagePrefixes": [
+                "kube",
+                "k8s"
+            ],
+            "groupName": "kubernetes crates",
+            "matchManagers": [
+                "cargo"
+            ]
+        }
+    ]
+}

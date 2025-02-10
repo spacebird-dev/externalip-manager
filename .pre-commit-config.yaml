@@ -1,0 +1,29 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks.git
+    rev: v4.6.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+      - id: check-executables-have-shebangs
+      - id: debug-statements
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
+    hooks:
+      - id: fmt
+      - id: cargo-check
+      - id: clippy
+  - repo: local
+    hooks:
+      - id: generate-crds
+        language: system
+        pass_filenames: false
+        files: ^crates/manager/src/crd
+        name: generate-crds
+        entry: bash -c 'cargo run -p externalip-manager-crd-exporter crds/v1alpha1'
+
+ci:
+  skip:
+    - fmt
+    - cargo-check
+    - clippy
