@@ -112,7 +112,7 @@ jobs:
       - name: Rename artifacts
         run: |
             mv target/linux/arm64/externalip-manager.x86_64-unknown-linux-gnu target/linux/arm64/externalip-manager
-            mv target/linux/amd64/externalip-manager.x86_64-unknown-linux-gnu target/linux/amd64/externalip-manager
+            mv target/linux/amd64/externalip-manager.aarch64-unknown-linux-gnu target/linux/amd64/externalip-manager
 
       - name: Login to GHCR
         uses: docker/login-action@v3
