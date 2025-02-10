@@ -46,7 +46,7 @@ pub enum QueryMode {
 #[serde(rename_all = "camelCase")]
 pub enum SolverKind {
     /// Use a public "What-is-my-ip"-style service to deduce external IP addresses
-    #[serde(rename = "ipSolver")]
+    #[serde(rename = "ipAPI")]
     IpAPI(IpAPIConfig),
     /// Resolve a hostname through DNS and return the resulting A/AAAA records as IP addresses
     DnsHostname(DnsHostnameConfig),
