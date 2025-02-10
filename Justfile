@@ -5,6 +5,9 @@ lint:
 format:
     cargo fmt
 
+run:
+    cargo run -p externalip-manager
+
 build: crds
     cargo build {{ shared_args }}
 build-cross target:
