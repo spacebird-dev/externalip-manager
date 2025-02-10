@@ -149,7 +149,7 @@ jobs:
 
   gh-release-artifacts:
     name: Upload ${{ matrix.target }} to GH Release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event.release
     runs-on: ubuntu-24.04
     needs:
       - build-test
