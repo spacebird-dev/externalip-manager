@@ -81,12 +81,12 @@ impl Manager {
                         self.publish_event(
                             &Event {
                                 type_: EventType::Warning,
-                                reason: "FailingExternalIPResolution".to_string(),
+                                reason: "failingExternalIPResolution".to_string(),
                                 note: Some(format!(
                                     "Annotations are conflicting: {:?}",
                                     annotations
                                 )),
-                                action: "ResolvingExternalIP".to_string(),
+                                action: "resolvingExternalIP".to_string(),
                                 secondary: None,
                             },
                             &svc.object_ref(&()),
@@ -121,9 +121,9 @@ impl Manager {
                     self.publish_event(
                         &Event {
                             type_: EventType::Warning,
-                            reason: "InvalidExternalIPAddresses".to_string(),
+                            reason: "invalidExternalIPAddresses".to_string(),
                             note: Some("Service has invalid externalIP entries".to_string()),
-                            action: "ResolvingExternalIP".to_string(),
+                            action: "resolvingExternalIP".to_string(),
                             secondary: None,
                         },
                         &svc.svc().object_ref(&()),
@@ -144,12 +144,12 @@ impl Manager {
                             self.publish_event(
                                 &Event {
                                     type_: EventType::Warning,
-                                    reason: "FailedExternalIPSource".to_string(),
+                                    reason: "failingExternalIPSource".to_string(),
                                     note: Some(format!(
                                         "Could not retrieve ClusterExternalIPSource: {}",
                                         e
                                     )),
-                                    action: "ClusterExternalIPSourceValidation".to_string(),
+                                    action: "clusterExternalIPSourceValidation".to_string(),
                                     secondary: None,
                                 },
                                 &svc.svc().object_ref(&()),
@@ -167,9 +167,9 @@ impl Manager {
                             self.publish_event(
                                 &Event {
                                     type_: EventType::Warning,
-                                    reason: "FailingSourceValidation".to_string(),
+                                    reason: "failingSourceValidation".to_string(),
                                     note: Some(format!("Source is invalid: {}", e)),
-                                    action: "ClusterExternalIPSourceValidation".to_string(),
+                                    action: "clusterExternalIPSourceValidation".to_string(),
                                     secondary: None,
                                 },
                                 &ceips_ref,
@@ -194,9 +194,9 @@ impl Manager {
                     self.publish_event(
                         &Event {
                             type_: EventType::Warning,
-                            reason: "FailingExternalIPQuery".to_string(),
+                            reason: "failingExternalIPQuery".to_string(),
                             note: Some(format!("Failed to query external IP addresses: {}", e)),
-                            action: "ResolvingExternalIP".to_string(),
+                            action: "resolvingExternalIP".to_string(),
                             secondary: None,
                         },
                         &svc.svc().object_ref(&()),
@@ -243,9 +243,9 @@ impl Manager {
                     self.publish_event(
                         &Event {
                             type_: EventType::Normal,
-                            reason: "ExternalIPsUpdated".to_string(),
+                            reason: "externalIPsUpdated".to_string(),
                             note: None,
-                            action: "ResolvingExternalIP".to_string(),
+                            action: "resolvingExternalIP".to_string(),
                             secondary: None,
                         },
                         &svc.svc().object_ref(&()),
