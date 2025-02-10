@@ -68,7 +68,7 @@ impl ExternalIpSvc {
     }
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Clone)]
 pub enum FinderError {
     #[error("Service `{namespace}`/`{name}` has conflicting annotations: `{annotations:?}`")]
     #[allow(dead_code)]

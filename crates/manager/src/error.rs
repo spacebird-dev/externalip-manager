@@ -1,9 +1,11 @@
 use std::net::AddrParseError;
 
-use crate::ip_source::SourceError;
+use crate::{ip_source::SourceError, svc::FinderError};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    #[error("Service error: `{0}`")]
+    Service(FinderError),
     #[error("Invalid IP address: `{0}`")]
     InvalidIpAddress(String),
     #[error("Kube error: `{0}`")]
@@ -27,5 +29,11 @@ impl From<SourceError> for Error {
 impl From<AddrParseError> for Error {
     fn from(value: AddrParseError) -> Self {
         Error::InvalidIpAddress(value.to_string())
+    }
+}
+
+impl From<FinderError> for Error {
+    fn from(value: FinderError) -> Self {
+        Error::Service(value)
     }
 }

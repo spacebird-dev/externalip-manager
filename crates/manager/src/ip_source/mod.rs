@@ -9,7 +9,7 @@ use crate::crd::v1alpha1::{self, CLUSTER_EXTERNAL_IP_SOURCE_KIND};
 
 mod solvers;
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, Clone)]
 #[error("Failed to query address source: {msg}")]
 pub struct SourceError {
     pub msg: String,

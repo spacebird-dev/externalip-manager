@@ -95,6 +95,8 @@ impl Manager {
                     }
                 }
             }
+            errors.push(Error::from(err.clone()));
+            continue;
         }
 
         for svc in svcs.iter().filter_map(|svc| svc.as_ref().ok()) {
@@ -116,6 +118,17 @@ impl Manager {
                 Ok(ips) => ips,
                 Err(e) => {
                     error!(msg = "Service has invalid ExternalIP addresses", e = ?e);
+                    self.publish_event(
+                        &Event {
+                            type_: EventType::Warning,
+                            reason: "InvalidExternalIPAddresses".to_string(),
+                            note: Some("Service has invalid externalIP entries".to_string()),
+                            action: "ResolvingExternalIP".to_string(),
+                            secondary: None,
+                        },
+                        &svc.svc().object_ref(&()),
+                    )
+                    .await;
                     errors.push(e);
                     continue;
                 }
@@ -128,6 +141,20 @@ impl Manager {
                         Ok(cips) => cips,
                         Err(e) => {
                             error!(msg = "Could not retrieve ClusterExternalIPSource", name = cips_name, err = ?e);
+                            self.publish_event(
+                                &Event {
+                                    type_: EventType::Warning,
+                                    reason: "FailedExternalIPSource".to_string(),
+                                    note: Some(format!(
+                                        "Could not retrieve ClusterExternalIPSource: {}",
+                                        e
+                                    )),
+                                    action: "ClusterExternalIPSourceValidation".to_string(),
+                                    secondary: None,
+                                },
+                                &svc.svc().object_ref(&()),
+                            )
+                            .await;
                             errors.push(Error::from(e));
                             continue;
                         }
@@ -164,6 +191,17 @@ impl Manager {
                         address_source_kind = ip_source.kind(),
                         address_source_name = ip_source.name()
                     );
+                    self.publish_event(
+                        &Event {
+                            type_: EventType::Warning,
+                            reason: "FailingExternalIPQuery".to_string(),
+                            note: Some(format!("Failed to query external IP addresses: {}", e)),
+                            action: "ResolvingExternalIP".to_string(),
+                            secondary: None,
+                        },
+                        &svc.svc().object_ref(&()),
+                    )
+                    .await;
                     errors.push(Error::from(e));
                     continue;
                 }
@@ -207,7 +245,7 @@ impl Manager {
                             type_: EventType::Normal,
                             reason: "ExternalIPsUpdated".to_string(),
                             note: None,
-                            action: "ExternalIPsUpdate".to_string(),
+                            action: "ResolvingExternalIP".to_string(),
                             secondary: None,
                         },
                         &svc.svc().object_ref(&()),
