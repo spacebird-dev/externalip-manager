@@ -20,6 +20,7 @@ mod ip_source;
 mod svc;
 
 const MANAGER_ID: &str = "externalip-manager";
+const ACTION_ID_RECONCILE: &str = "updatingExternalIPs";
 
 pub struct Manager {
     config: ManagerConfig,
@@ -78,17 +79,10 @@ impl Manager {
                 } => {
                     let api: Api<Service> = Api::namespaced(self.client.clone(), namespace);
                     if let Ok(svc) = api.get(name).await {
-                        self.publish_event(
-                            &Event {
-                                type_: EventType::Warning,
-                                reason: "failingExternalIPResolution".to_string(),
-                                note: Some(format!(
-                                    "Annotations are conflicting: {:?}",
-                                    annotations
-                                )),
-                                action: "resolvingExternalIP".to_string(),
-                                secondary: None,
-                            },
+                        self.publish_event_reconcile(
+                            EventType::Warning,
+                            "failingExternalIPResolution".to_string(),
+                            Some(format!("Annotations are conflicting: {:?}", annotations)),
                             &svc.object_ref(&()),
                         )
                         .await;
@@ -118,14 +112,10 @@ impl Manager {
                 Ok(ips) => ips,
                 Err(e) => {
                     error!(msg = "Service has invalid ExternalIP addresses", e = ?e);
-                    self.publish_event(
-                        &Event {
-                            type_: EventType::Warning,
-                            reason: "invalidExternalIPAddresses".to_string(),
-                            note: Some("Service has invalid externalIP entries".to_string()),
-                            action: "resolvingExternalIP".to_string(),
-                            secondary: None,
-                        },
+                    self.publish_event_reconcile(
+                        EventType::Warning,
+                        "invalidExternalIPAddresses".to_string(),
+                        Some("Service has invalid externalIP entries".to_string()),
                         &svc.svc().object_ref(&()),
                     )
                     .await;
@@ -141,17 +131,10 @@ impl Manager {
                         Ok(cips) => cips,
                         Err(e) => {
                             error!(msg = "Could not retrieve ClusterExternalIPSource", name = cips_name, err = ?e);
-                            self.publish_event(
-                                &Event {
-                                    type_: EventType::Warning,
-                                    reason: "failingExternalIPSource".to_string(),
-                                    note: Some(format!(
-                                        "Could not retrieve ClusterExternalIPSource: {}",
-                                        e
-                                    )),
-                                    action: "clusterExternalIPSourceValidation".to_string(),
-                                    secondary: None,
-                                },
+                            self.publish_event_reconcile(
+                                EventType::Warning,
+                                "failingExternalIPSource".to_string(),
+                                Some(format!("Could not retrieve ClusterExternalIPSource: {}", e)),
                                 &svc.svc().object_ref(&()),
                             )
                             .await;
@@ -164,14 +147,10 @@ impl Manager {
                         Ok(eips) => eips,
                         Err(e) => {
                             error!(msg = "Unable to use ClusterExternalIPSource", name = cips_name, err = ?e);
-                            self.publish_event(
-                                &Event {
-                                    type_: EventType::Warning,
-                                    reason: "failingSourceValidation".to_string(),
-                                    note: Some(format!("Source is invalid: {}", e)),
-                                    action: "clusterExternalIPSourceValidation".to_string(),
-                                    secondary: None,
-                                },
+                            self.publish_event_reconcile(
+                                EventType::Warning,
+                                "failingSourceValidation".to_string(),
+                                Some(format!("Source is invalid: {}", e)),
                                 &ceips_ref,
                             )
                             .await;
@@ -191,14 +170,10 @@ impl Manager {
                         address_source_kind = ip_source.kind(),
                         address_source_name = ip_source.name()
                     );
-                    self.publish_event(
-                        &Event {
-                            type_: EventType::Warning,
-                            reason: "failingExternalIPQuery".to_string(),
-                            note: Some(format!("Failed to query external IP addresses: {}", e)),
-                            action: "resolvingExternalIP".to_string(),
-                            secondary: None,
-                        },
+                    self.publish_event_reconcile(
+                        EventType::Warning,
+                        "failingExternalIPQuery".to_string(),
+                        Some(format!("Failed to query external IP addresses: {}", e)),
                         &svc.svc().object_ref(&()),
                     )
                     .await;
@@ -240,14 +215,10 @@ impl Manager {
             {
                 Ok(_) => {
                     info!(msg = "Service updated", svc = svc_id, addresses = ?new_ip_set );
-                    self.publish_event(
-                        &Event {
-                            type_: EventType::Normal,
-                            reason: "externalIPsUpdated".to_string(),
-                            note: None,
-                            action: "resolvingExternalIP".to_string(),
-                            secondary: None,
-                        },
+                    self.publish_event_reconcile(
+                        EventType::Normal,
+                        "externalIPsUpdated".to_string(),
+                        None,
                         &svc.svc().object_ref(&()),
                     )
                     .await;
@@ -262,9 +233,28 @@ impl Manager {
         Ok(errors)
     }
 
-    async fn publish_event(&self, event: &Event, object_ref: &ObjectReference) {
-        if let Err(e) = self.recorder.publish(event, object_ref).await {
-            warn!(msg = "Failed to publish event for failing service", err = ?e, event = event.note)
+    async fn publish_event_reconcile(
+        &self,
+        type_: EventType,
+        reason: String,
+        note: Option<String>,
+        object_ref: &ObjectReference,
+    ) {
+        if let Err(e) = self
+            .recorder
+            .publish(
+                &Event {
+                    type_,
+                    reason: reason.clone(),
+                    note: note.clone(),
+                    action: ACTION_ID_RECONCILE.to_string(),
+                    secondary: None,
+                },
+                object_ref,
+            )
+            .await
+        {
+            warn!(msg = "Failed to publish event for failing service", err = ?e, event = note, reason = reason)
         }
     }
 }
