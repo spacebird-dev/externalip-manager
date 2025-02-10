@@ -1,0 +1,12 @@
+apiVersion: externalip.spacebird.dev/v1alpha1
+kind: ClusterExternalIPSource
+metadata:
+  name: example-source
+spec:
+  ipv4:
+    solvers:
+      - ipAPI:
+          provider: myIp
+  ipv6:
+    solvers:
+      - loadBalancerIngress: {}

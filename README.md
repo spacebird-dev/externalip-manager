@@ -84,6 +84,26 @@ The following solvers are currently available:
   - Use case: You have MetalLB or a similar LoadBalancer providing you with some public addresses
   - Parameters: None
 
+You can optionally define multiple solvers for a single IP source:
+
+```yaml
+piVersion: externalip.spacebird.dev/v1alpha1
+kind: ClusterExternalIPSource
+metadta:
+    name: public
+spec:
+  ipv4:
+    queryMode: firstFound
+    solvers:
+      - dnsHostname:
+          host: "cluster-public-ip.example.com"
+      - loadBalancerIngress: {}
+```
+
+
+By default, the controller will attempt each solver in sequence until one returns a valid address (`queryMode == firstFound`).
+You can also have the controller query all solvers and return the combined set of addresses by setting `queryMode` to `all`.
+
 ## Installation
 
 To install this operator, use the Helm chart at [spacebird-dev/charts](https://github.com/spacebird-dev/charts/tree/main/charts/externalip-manager).
@@ -93,3 +113,6 @@ To install this operator, use the Helm chart at [spacebird-dev/charts](https://g
 This operator is built in Rust, using standard `cargo` tooling.
 You may want to install the `just` command runner to run the recipes in the [`Justfile`](./Justfile).
 `cross` is used for cross-compilation.
+
+When making changes to the CRDs, please run `just crds` before committing any changes.
+There is also a pre-commit hook that does this for you if you run `pre-commit install`
