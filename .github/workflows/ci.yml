@@ -111,6 +111,9 @@ jobs:
           path: target/linux/arm64/
       - name: Rename artifacts
         run: |
+            ls -la /target/linux
+            ls -la /target/linux/amd64/
+            ls -la /target/linux/amd64/*
             mv target/linux/amd64/externalip-manager.x86_64-unknown-linux-gnu target/linux/amd64/externalip-manager
             mv target/linux/arm64/externalip-manager.aarch64-unknown-linux-gnu target/linux/arm64/externalip-manager
 
