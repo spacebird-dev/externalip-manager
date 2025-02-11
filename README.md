@@ -70,6 +70,9 @@ spec:
 
 `externalip-manager` will then pick up this service and query the solvers in the `ClusterExternalIPSource` until valid IP addresses are found.
 It will then write them into the `externalIP` field of the service and regularly check the sources for any changes.
+From there, an Ingress controller can then pick up the `externalIP` field and use it to advertise Ingress IP addresses for ExternalDNS.
+In particular, `ingress-nginx` uses both the `externalIP` field the `loadBalancer.ingress` status as provisioned by MetalLB, so your Ingress resources will have both public and internal IPs set.
+You can then use 'net-filter' parameters for `external-dns` to further restrict your published IPs, depending on your networking (Hairpin NAT or split-Horizon DNS).
 
 The following solvers are currently available:
 
