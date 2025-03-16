@@ -65,7 +65,7 @@ jobs:
         with:
           tool: cross@0.2.5
 
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v3
         with:
           just-version: '1.39.0'
 
