@@ -45,7 +45,7 @@ async fn main() -> Result<()> {
     let manager = Manager::new(cfg).await?;
 
     loop {
-        match manager.reconcile().await {
+        match manager.reconcile_svcs().await {
             Ok(errs) if !errs.is_empty() => {
                 warn!(
                     msg = "Errors encountered on reconciliation run",

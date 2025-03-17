@@ -54,6 +54,7 @@ impl ServiceFinder {
     }
 }
 
+#[derive(Debug)]
 pub struct ExternalIpSvc {
     svc: Service,
     source: ExternalIpSourceKind,
