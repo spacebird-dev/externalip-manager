@@ -5,15 +5,16 @@ metadata:
 spec:
   group: externalip.spacebird.dev
   names:
-    categories: []
+    categories:
+    - externalip-manager
     kind: ClusterExternalIPSource
     plural: clusterexternalipsources
-    shortNames: []
+    shortNames:
+    - ceips
     singular: clusterexternalipsource
   scope: Cluster
   versions:
-  - additionalPrinterColumns: []
-    name: v1alpha1
+  - name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Cluster-Wide source of external IP addresses for a given service

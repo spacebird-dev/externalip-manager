@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
-use externalip_manager_manager::crd::v1alpha1::ClusterExternalIPSource;
+use externalip_manager_manager::crd::v1alpha1;
 use kube::CustomResourceExt;
 
 #[derive(Debug, Clone, PartialEq, Eq, ValueEnum, Default)]
@@ -25,17 +25,20 @@ struct Arg {
     api_version: ApiVersion,
 }
 
+fn write(crd: String, dest: PathBuf) -> Result<()> {
+    // dirty, dirty hack to fix https://github.com/kube-rs/kube/issues/1680 for now
+    let crd = crd.replace("additionalPrinterColumns: []\n    name:", "name:");
+    Ok(fs::write(dest, crd)?)
+}
+
 fn main() -> Result<()> {
     let args = Arg::parse();
 
     match args.api_version {
-        ApiVersion::V1Alpha1 => {
-            fs::write(
-                args.output_dir
-                    .join("v1alpha1-ClusterExternalIPSource.yaml"),
-                serde_yaml::to_string(&ClusterExternalIPSource::crd()).unwrap(),
-            )?;
-        }
+        ApiVersion::V1Alpha1 => write(
+            serde_yaml::to_string(&v1alpha1::ClusterExternalIPSource::crd()).unwrap(),
+            args.output_dir
+                .join("v1alpha1-ClusterExternalIPSource.yaml"),
+        ),
     }
-    Ok(())
 }

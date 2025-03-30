@@ -1,5 +1,7 @@
 shared_args := "--release --all-features --workspace --exclude externalip-manager-crd-exporter"
 
+default: format lint build
+
 lint:
     cargo clippy
 format:

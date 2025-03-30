@@ -10,7 +10,9 @@ pub const CLUSTER_EXTERNAL_IP_SOURCE_KIND: &str = "ClusterExternalIPSource";
     version = "v1alpha1",
     kind = "ClusterExternalIPSource",
     plural = "clusterexternalipsources",
-    doc = "Cluster-Wide source of external IP addresses for a given service"
+    doc = "Cluster-Wide source of external IP addresses for a given service",
+    category = "externalip-manager",
+    shortname = "ceips"
 )]
 #[serde(rename_all = "camelCase")]
 pub struct ClusterExternalIpSourceSpec {
