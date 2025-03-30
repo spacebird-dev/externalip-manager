@@ -2,10 +2,7 @@ use std::net::IpAddr;
 
 use async_trait::async_trait;
 use hickory_resolver::{
-    config::{ResolverConfig, ResolverOpts},
-    error::ResolveError,
-    name_server::{GenericConnector, TokioRuntimeProvider},
-    AsyncResolver, TokioAsyncResolver,
+    config::ResolverConfig, name_server::TokioConnectionProvider, ResolveError, Resolver,
 };
 use itertools::Itertools;
 use k8s_openapi::api::core::v1::Service;
@@ -18,14 +15,18 @@ use super::{Source, SourceError};
 #[derive(Debug)]
 pub struct DnsHostname {
     host: String,
-    resolver: AsyncResolver<GenericConnector<TokioRuntimeProvider>>,
+    resolver: Resolver<TokioConnectionProvider>,
 }
 
 impl DnsHostname {
     pub fn new(host: String) -> DnsHostname {
         DnsHostname {
             host,
-            resolver: TokioAsyncResolver::tokio(ResolverConfig::default(), ResolverOpts::default()),
+            resolver: Resolver::builder_with_config(
+                ResolverConfig::default(),
+                TokioConnectionProvider::default(),
+            )
+            .build(),
         }
     }
 }
