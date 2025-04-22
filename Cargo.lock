@@ -551,7 +551,7 @@ dependencies = [
 
 [[package]]
 name = "externalip-manager"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -564,7 +564,7 @@ dependencies = [
 
 [[package]]
 name = "externalip-manager-crd-exporter"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -576,7 +576,7 @@ dependencies = [
 
 [[package]]
 name = "externalip-manager-manager"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-trait",
  "hickory-resolver",
