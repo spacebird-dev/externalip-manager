@@ -111,6 +111,8 @@ You can also have the controller query all solvers and return the combined set o
 
 To install this operator, use the Helm chart at [spacebird-dev/charts](https://github.com/spacebird-dev/charts/tree/main/charts/externalip-manager).
 
+To see the minimum supported k8s version, check the `k8s-openapi` feature flag in [crates/bin/Cargo.toml](./crates/bin/Cargo.toml)
+
 ## Building
 
 This operator is built in Rust, using standard `cargo` tooling.
