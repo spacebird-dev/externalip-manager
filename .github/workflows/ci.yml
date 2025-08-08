@@ -18,22 +18,22 @@ jobs:
     steps:
       - name: Check out codebase
         uses: actions/checkout@v4
-
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy,rustfmt
 
-      - uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features --workspace
+      - name: Enable cargo caching
+        uses: Swatinem/rust-cache@v2
 
-      - uses: mbrobbel/rustfmt-check@0.19.0
+      - uses: extractions/setup-just@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-        # cant push to main directly
-        if: github.ref != 'refs/heads/main'
+          just-version: '1.39.0'
+
+      - name: Run lints
+        run: |
+          export RUSTFLAGS="-D warnings"
+          just lint
 
       - name: Run pre-commit checks
         uses: pre-commit/action@v3.0.1
@@ -51,10 +51,8 @@ jobs:
     steps:
       - name: Check out codebase
         uses: actions/checkout@v4
-
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@stable
-
       - name: Enable cargo caching
         uses: Swatinem/rust-cache@v2
         with:
@@ -64,15 +62,16 @@ jobs:
         uses: taiki-e/install-action@v2
         with:
           tool: cross@0.2.5
-
       - uses: extractions/setup-just@v3
         with:
           just-version: '1.39.0'
 
-      - name: Build and Test release binary
+      - name: Build and Test binary
         run: |
-          just build-cross ${{ matrix.target.name }}
-          just test-cross ${{ matrix.target.name }}
+          export RUSTFLAGS="-D warnings"
+          export RELEASE="${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') }}"
+          just release=$RELEASE build-cross ${{ matrix.target.name }}
+          just release=$RELEASE test-cross ${{ matrix.target.name }}
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
@@ -121,7 +120,7 @@ jobs:
         with:
           registry: quay.io
           username: ${{ secrets.QUAY_USERNAME }}
-          password: ${{ secrets.QUAY_TOKEN}}
+          password: ${{ secrets.QUAY_TOKEN }}
 
       # version is either the major release ('1'), major + minor ('1.2') or full version ('1.2.3-pre.4')
       # Note that no tag '0[-arch]' will be generated, as 0.x versions are unstable and should not be relied upon
