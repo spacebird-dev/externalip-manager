@@ -86,6 +86,12 @@ The following solvers are currently available:
 - `loadBalancerIngress`: Use the addresses specified in the `.status.loadBalancer.ingress` field
   - Use case: You have MetalLB or a similar LoadBalancer providing you with some public addresses
   - Parameters: None
+- `static`: Just return a set of fixed IP addresses. Useful as a fallback or when used in combination with `merge`
+- `merge`: Create an IP address by merging parts of different IP addresses together. Useful when you have an external network prefix that differs from your node one, such as with NPTv6.
+  - This meta-solver queries several sub-solver and then merges their results based on a supplied netmask.
+  - It takes a list of `partialSolvers`, where each partial solver has one regular solver (except `merge`) and a mask.
+  - After all partial solvers have been queried, their results are combined into one address that is then returned.
+  - For an example of how to use it, see [here](./test/manifests/merge.yaml)
 
 You can optionally define multiple solvers for a single IP source:
 
@@ -106,6 +112,8 @@ spec:
 
 By default, the controller will attempt each solver in sequence until one returns a valid address (`queryMode == firstFound`).
 You can also have the controller query all solvers and return the combined set of addresses by setting `queryMode` to `all`.
+
+For more examples, see the manifests directory in [`test`](./test/manifests/).
 
 ## Installation
 

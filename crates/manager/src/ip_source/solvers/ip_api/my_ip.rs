@@ -7,8 +7,8 @@ use serde::Deserialize;
 use super::IpProvider;
 use crate::ip_source::{AddressKind, SourceError};
 
-const MY_IP_URL_V4: &str = "https://api4.my-ip.io/ip.json";
-const MY_IP_URL_V6: &str = "https://api6.my-ip.io/ip.json";
+const MY_IP_URL_V4: &str = "https://api4.my-ip.io/v2/ip.json";
+const MY_IP_URL_V6: &str = "https://api6.my-ip.io/v2/ip.json";
 
 #[derive(Deserialize)]
 enum MyIpType {

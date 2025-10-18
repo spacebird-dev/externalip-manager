@@ -26,10 +26,14 @@ spec:
                 nullable: true
                 properties:
                   queryMode:
-                    description: How the list of solvers should be queried. Can be "firstFound" (default) or "all". "firstFound" will query solvers until one succeeds and return only the addresses from this query. "all" will query all solvers and return all found addresses.
+                    description: |-
+                      How the list of solvers should be queried. Can be "firstFound" (default) or "all".
+                      "firstFound" will query solvers until one succeeds and return only the addresses from this query.
+                      "all" will query all solvers and return all found addresses.
                     enum:
                     - firstFound
                     - all
+                    - null
                     nullable: true
                     type: string
                   solvers:
@@ -42,6 +46,10 @@ spec:
                         - dnsHostname
                       - required:
                         - loadBalancerIngress
+                      - required:
+                        - static
+                      - required:
+                        - merge
                       properties:
                         dnsHostname:
                           description: Resolve a hostname through DNS and return the resulting A/AAAA records as IP addresses
@@ -56,15 +64,96 @@ spec:
                           description: Use a public "What-is-my-ip"-style service to deduce external IP addresses
                           properties:
                             provider:
+                              default: myIp
                               description: The service to use for retrieving public IP information
                               enum:
                               - myIp
                               type: string
-                          required:
-                          - provider
                           type: object
                         loadBalancerIngress:
                           description: Use the ingress addresses assigned to the service in .status.loadBalancer.ingress as external IP addresses
+                          type: object
+                        merge:
+                          description: Merge the results from multiple solvers into a single address through masks. Useful for overriding a prefix or subnet from an acquired IP, or for merging a public prefix with a private address
+                          properties:
+                            partialSolvers:
+                              description: |-
+                                Each partial solver returns a section of the final IP address.
+                                Should a solver return multiple IP addresses, the last address is used
+                              items:
+                                properties:
+                                  mask:
+                                    description: 'This netmask defines the section of the solvers response that will be used in the final address. Examples: 0:0:0:ffff::, 0.0.255.0'
+                                    format: ip
+                                    type: string
+                                  solver:
+                                    description: |-
+                                      Type of solver to retrieve the address part through.
+                                      Should a solver return multiple IP addresses, the last address is used as the part
+                                    oneOf:
+                                    - required:
+                                      - ipAPI
+                                    - required:
+                                      - dnsHostname
+                                    - required:
+                                      - loadBalancerIngress
+                                    - required:
+                                      - static
+                                    properties:
+                                      dnsHostname:
+                                        description: Resolve a hostname through DNS and return the resulting A/AAAA records as IP addresses
+                                        properties:
+                                          host:
+                                            description: The host to resolve.
+                                            type: string
+                                        required:
+                                        - host
+                                        type: object
+                                      ipAPI:
+                                        description: Use a public "What-is-my-ip"-style service to deduce external IP addresses
+                                        properties:
+                                          provider:
+                                            default: myIp
+                                            description: The service to use for retrieving public IP information
+                                            enum:
+                                            - myIp
+                                            type: string
+                                        type: object
+                                      loadBalancerIngress:
+                                        description: Use the ingress addresses assigned to the service in .status.loadBalancer.ingress as external IP addresses
+                                        type: object
+                                      static:
+                                        description: Return one or more static IP addresses. Useful as a fallback or as a partial address for the "merge" solver
+                                        properties:
+                                          addresses:
+                                            description: Addresses to return. Addresses with mismatched types (v4 vs v6) will be ignored
+                                            items:
+                                              format: ip
+                                              type: string
+                                            type: array
+                                        required:
+                                        - addresses
+                                        type: object
+                                    type: object
+                                required:
+                                - mask
+                                - solver
+                                type: object
+                              type: array
+                          required:
+                          - partialSolvers
+                          type: object
+                        static:
+                          description: Return one or more static IP addresses. Useful as a fallback or as a partial address for the "merge" solver
+                          properties:
+                            addresses:
+                              description: Addresses to return. Addresses with mismatched types (v4 vs v6) will be ignored
+                              items:
+                                format: ip
+                                type: string
+                              type: array
+                          required:
+                          - addresses
                           type: object
                       type: object
                     type: array
@@ -74,10 +163,14 @@ spec:
                 nullable: true
                 properties:
                   queryMode:
-                    description: How the list of solvers should be queried. Can be "firstFound" (default) or "all". "firstFound" will query solvers until one succeeds and return only the addresses from this query. "all" will query all solvers and return all found addresses.
+                    description: |-
+                      How the list of solvers should be queried. Can be "firstFound" (default) or "all".
+                      "firstFound" will query solvers until one succeeds and return only the addresses from this query.
+                      "all" will query all solvers and return all found addresses.
                     enum:
                     - firstFound
                     - all
+                    - null
                     nullable: true
                     type: string
                   solvers:
@@ -90,6 +183,10 @@ spec:
                         - dnsHostname
                       - required:
                         - loadBalancerIngress
+                      - required:
+                        - static
+                      - required:
+                        - merge
                       properties:
                         dnsHostname:
                           description: Resolve a hostname through DNS and return the resulting A/AAAA records as IP addresses
@@ -104,15 +201,96 @@ spec:
                           description: Use a public "What-is-my-ip"-style service to deduce external IP addresses
                           properties:
                             provider:
+                              default: myIp
                               description: The service to use for retrieving public IP information
                               enum:
                               - myIp
                               type: string
-                          required:
-                          - provider
                           type: object
                         loadBalancerIngress:
                           description: Use the ingress addresses assigned to the service in .status.loadBalancer.ingress as external IP addresses
+                          type: object
+                        merge:
+                          description: Merge the results from multiple solvers into a single address through masks. Useful for overriding a prefix or subnet from an acquired IP, or for merging a public prefix with a private address
+                          properties:
+                            partialSolvers:
+                              description: |-
+                                Each partial solver returns a section of the final IP address.
+                                Should a solver return multiple IP addresses, the last address is used
+                              items:
+                                properties:
+                                  mask:
+                                    description: 'This netmask defines the section of the solvers response that will be used in the final address. Examples: 0:0:0:ffff::, 0.0.255.0'
+                                    format: ip
+                                    type: string
+                                  solver:
+                                    description: |-
+                                      Type of solver to retrieve the address part through.
+                                      Should a solver return multiple IP addresses, the last address is used as the part
+                                    oneOf:
+                                    - required:
+                                      - ipAPI
+                                    - required:
+                                      - dnsHostname
+                                    - required:
+                                      - loadBalancerIngress
+                                    - required:
+                                      - static
+                                    properties:
+                                      dnsHostname:
+                                        description: Resolve a hostname through DNS and return the resulting A/AAAA records as IP addresses
+                                        properties:
+                                          host:
+                                            description: The host to resolve.
+                                            type: string
+                                        required:
+                                        - host
+                                        type: object
+                                      ipAPI:
+                                        description: Use a public "What-is-my-ip"-style service to deduce external IP addresses
+                                        properties:
+                                          provider:
+                                            default: myIp
+                                            description: The service to use for retrieving public IP information
+                                            enum:
+                                            - myIp
+                                            type: string
+                                        type: object
+                                      loadBalancerIngress:
+                                        description: Use the ingress addresses assigned to the service in .status.loadBalancer.ingress as external IP addresses
+                                        type: object
+                                      static:
+                                        description: Return one or more static IP addresses. Useful as a fallback or as a partial address for the "merge" solver
+                                        properties:
+                                          addresses:
+                                            description: Addresses to return. Addresses with mismatched types (v4 vs v6) will be ignored
+                                            items:
+                                              format: ip
+                                              type: string
+                                            type: array
+                                        required:
+                                        - addresses
+                                        type: object
+                                    type: object
+                                required:
+                                - mask
+                                - solver
+                                type: object
+                              type: array
+                          required:
+                          - partialSolvers
+                          type: object
+                        static:
+                          description: Return one or more static IP addresses. Useful as a fallback or as a partial address for the "merge" solver
+                          properties:
+                            addresses:
+                              description: Addresses to return. Addresses with mismatched types (v4 vs v6) will be ignored
+                              items:
+                                format: ip
+                                type: string
+                              type: array
+                          required:
+                          - addresses
                           type: object
                       type: object
                     type: array

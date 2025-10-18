@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use k8s_openapi::api::core::v1::Service;
-use kube::{api::ListParams, Api, Client};
+use kube::{Api, Client, api::ListParams};
 use tracing::{info, instrument};
 
 use crate::ip_source::ExternalIpSourceKind;

@@ -2,7 +2,7 @@ use std::net::IpAddr;
 
 use async_trait::async_trait;
 use hickory_resolver::{
-    config::ResolverConfig, name_server::TokioConnectionProvider, ResolveError, Resolver,
+    ResolveError, Resolver, config::ResolverConfig, name_server::TokioConnectionProvider,
 };
 use itertools::Itertools;
 use k8s_openapi::api::core::v1::Service;
@@ -39,7 +39,7 @@ impl Source for DnsHostname {
         kind: ip_source::AddressKind,
         _: &Service,
     ) -> Result<Vec<std::net::IpAddr>, ip_source::SourceError> {
-        let addrs = match kind {
+        match kind {
             ip_source::AddressKind::IPv4 => Ok(self
                 .resolver
                 .ipv4_lookup(self.host.clone())
@@ -54,8 +54,7 @@ impl Source for DnsHostname {
                 .iter()
                 .map(|a| IpAddr::V6(a.0))
                 .collect_vec()),
-        };
-        addrs
+        }
     }
 }
 

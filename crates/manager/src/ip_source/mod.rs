@@ -1,11 +1,13 @@
 use std::{fmt::Debug, net::IpAddr};
 
-use itertools::Itertools;
 use k8s_openapi::api::core::v1::Service;
-use solvers::{DnsHostname, IpSolver, LoadBalancerIngress, Source};
+use solvers::Source;
 use tracing::{error, info, instrument};
 
-use crate::crd::v1alpha1::{self, CLUSTER_EXTERNAL_IP_SOURCE_KIND};
+use crate::{
+    crd::v1alpha1::{self, CLUSTER_EXTERNAL_IP_SOURCE_KIND},
+    ip_source::solvers::{DnsHostname, IpSolver, LoadBalancerIngress, Merge, Static},
+};
 
 mod solvers;
 
@@ -38,12 +40,14 @@ impl ExternalIpSourceKind {
     }
 }
 
+#[derive(Debug)]
 pub struct ExternalIpSource {
     kind: ExternalIpSourceKind,
     v4: Option<SourceList>,
     v6: Option<SourceList>,
 }
 impl ExternalIpSource {
+    #[instrument]
     pub async fn query(&self, svc: &Service) -> Result<Vec<IpAddr>, SourceError> {
         let mut addrs = vec![];
         if let Some(v4) = &self.v4 {
@@ -187,25 +191,34 @@ impl TryFrom<v1alpha1::IpSolversConfig> for SourceList {
                 msg: "Sources list is empty".to_string(),
             });
         }
-        let sources: Vec<Box<dyn Source>> = value
+        let sources = value
             .solvers
             .iter()
             .map(|s| match s {
                 v1alpha1::SolverKind::IpAPI(ip_solver) => {
                     let boxed: Box<dyn Source> = Box::new(IpSolver::new(ip_solver.provider));
-                    boxed
+                    Ok(boxed)
                 }
                 v1alpha1::SolverKind::DnsHostname(dns_hostname) => {
                     let boxed: Box<dyn Source> =
                         Box::new(DnsHostname::new(dns_hostname.host.clone()));
-                    boxed
+                    Ok(boxed)
                 }
                 v1alpha1::SolverKind::LoadBalancerIngress(_) => {
                     let boxed: Box<dyn Source> = Box::new(LoadBalancerIngress::new());
-                    boxed
+                    Ok(boxed)
+                }
+                v1alpha1::SolverKind::Static(cfg) => {
+                    let boxed: Box<dyn Source> = Box::new(Static::new(cfg.addresses.clone()));
+                    Ok(boxed)
+                }
+                v1alpha1::SolverKind::Merge(merge_config) => {
+                    let boxed: Box<dyn Source> =
+                        Box::new(Merge::new(merge_config.partial_solvers.clone())?);
+                    Ok(boxed)
                 }
             })
-            .collect_vec();
+            .collect::<Result<Vec<Box<dyn Source>>, SourceError>>()?;
         Ok(SourceList {
             sources,
             query_mode: value.query_mode.unwrap_or_default().into(),
