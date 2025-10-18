@@ -1,8 +1,11 @@
-FROM debian:bookworm-slim
+FROM rust:1.90-trixie AS builder
 
-ARG TARGET_DIR=release
+COPY . .
+RUN cargo build --release
 
-COPY target/${TARGET_DIR}/externalip-manager /usr/local/bin/
+FROM debian:trixie-slim
+
+COPY --from=builder target/release/externalip-manager /usr/local/bin/
 RUN chmod +x /usr/local/bin/externalip-manager
 
 # run unprivileged
