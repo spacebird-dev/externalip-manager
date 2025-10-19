@@ -42,7 +42,7 @@ async fn main() -> Result<()> {
     let cfg = ManagerConfig {
         dry_run: args.dry_run,
     };
-    let manager = Manager::new(cfg).await?;
+    let mut manager = Manager::new(cfg).await?;
 
     loop {
         match manager.reconcile_svcs().await {

@@ -22,7 +22,7 @@ impl Static {
 impl Source for Static {
     #[instrument]
     async fn get_addresses(
-        &self,
+        &mut self,
         kind: ip_source::AddressKind,
         _: &Service,
     ) -> Result<Vec<std::net::IpAddr>, ip_source::SourceError> {

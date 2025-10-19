@@ -35,7 +35,7 @@ impl DnsHostname {
 impl Source for DnsHostname {
     #[instrument]
     async fn get_addresses(
-        &self,
+        &mut self,
         kind: ip_source::AddressKind,
         _: &Service,
     ) -> Result<Vec<std::net::IpAddr>, ip_source::SourceError> {

@@ -21,7 +21,7 @@ pub use r#static::Static;
 #[async_trait]
 pub trait Source: Debug + Send + Sync {
     async fn get_addresses(
-        &self,
+        &mut self,
         kind: AddressKind,
         svc: &Service,
     ) -> Result<Vec<IpAddr>, SourceError>;

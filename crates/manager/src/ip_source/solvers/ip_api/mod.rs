@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use k8s_openapi::api::core::v1::Service;
 use my_ip::MyIp;
 use reqwest::Client;
+use tracing::{debug, instrument};
 
 use crate::ip_source;
 
@@ -14,7 +15,7 @@ mod my_ip;
 #[async_trait]
 trait IpProvider: Send + Sync + Debug {
     async fn get_addresses(
-        &self,
+        &mut self,
         kind: AddressKind,
         client: &Client,
     ) -> Result<Vec<IpAddr>, SourceError>;
@@ -40,12 +41,17 @@ impl IpSolver {
 
 #[async_trait]
 impl Source for IpSolver {
+    #[instrument(skip(self))]
     async fn get_addresses(
-        &self,
+        &mut self,
         kind: ip_source::AddressKind,
         _: &Service,
     ) -> Result<Vec<std::net::IpAddr>, ip_source::SourceError> {
-        self.inner.get_addresses(kind, &self.client).await
+        let res = self.inner.get_addresses(kind, &self.client).await;
+        if let Ok(addrs) = &res {
+            debug!(msg = "Resolved address through Ip API", addresses = ?addrs);
+        }
+        res
     }
 }
 
