@@ -89,7 +89,7 @@ fn ip_to_u128(addr: &IpAddr) -> u128 {
 impl Source for Merge {
     #[instrument]
     async fn get_addresses(
-        &self,
+        &mut self,
         kind: ip_source::AddressKind,
         svc: &Service,
     ) -> Result<Vec<std::net::IpAddr>, ip_source::SourceError> {
@@ -123,7 +123,7 @@ impl Source for Merge {
 
         let mut addrs = vec![];
         let mut parts = vec![];
-        for ps in &self.solvers {
+        for ps in &mut self.solvers {
             let addrs_ret = ps.solver.get_addresses(kind, svc).await?;
             let addr = addrs_ret.last().ok_or(SourceError {
                 msg: "merge partialSolver returned no addresses".to_string(),

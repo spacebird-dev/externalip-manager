@@ -3,24 +3,26 @@ use k8s_openapi::api::core::v1::Service;
 use kube::{Api, Client, api::ListParams};
 use tracing::{info, instrument};
 
-use crate::ip_source::ExternalIpSourceKind;
+use crate::{events::EventRecorder, ip_source::ExternalIpSourceKind};
 
 const ANNOTATION_CLUSTER_EXTERNAL_IP_SOURCE: &str =
     "externalip.spacebird.dev/cluster-external-ip-source";
 
-#[derive(Debug)]
 pub struct ServiceFinder {
     svc_api: Api<Service>,
+    #[allow(dead_code)]
+    events: EventRecorder,
 }
 
 impl ServiceFinder {
-    pub async fn new() -> Result<ServiceFinder, kube::Error> {
+    pub async fn new(events: EventRecorder) -> Result<ServiceFinder, kube::Error> {
         Ok(ServiceFinder {
             svc_api: Api::all(Client::try_default().await?),
+            events,
         })
     }
 
-    #[instrument]
+    #[instrument(skip(self))]
     pub async fn find_annotated_svcs(
         &self,
     ) -> Result<Vec<Result<ExternalIpSvc, FinderError>>, kube::Error> {
@@ -70,12 +72,7 @@ impl ExternalIpSvc {
 }
 
 #[derive(thiserror::Error, Debug, Clone)]
-pub enum FinderError {
-    #[error("Service `{namespace}`/`{name}` has conflicting annotations: `{annotations:?}`")]
-    #[allow(dead_code)]
-    ConflictingAnnotations {
-        name: String,
-        namespace: String,
-        annotations: Vec<String>,
-    },
+#[error("Failed to process service: {msg}")]
+pub struct FinderError {
+    pub msg: String,
 }

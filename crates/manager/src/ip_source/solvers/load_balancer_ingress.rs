@@ -21,7 +21,7 @@ impl LoadBalancerIngress {
 impl Source for LoadBalancerIngress {
     #[instrument]
     async fn get_addresses(
-        &self,
+        &mut self,
         kind: ip_source::AddressKind,
         svc: &Service,
     ) -> Result<Vec<std::net::IpAddr>, SourceError> {
