@@ -1,3 +1,5 @@
+use std::net::IpAddr;
+
 use kube::CustomResource;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -54,6 +56,10 @@ pub enum SolverKind {
     DnsHostname(DnsHostnameConfig),
     /// Use the ingress addresses assigned to the service in .status.loadBalancer.ingress as external IP addresses
     LoadBalancerIngress(LoadBalancerIngressConfig),
+    /// Return one or more static IP addresses. Useful as a fallback or as a partial address for the "merge" solver
+    Static(StaticConfig),
+    /// Merge the results from multiple solvers into a single address through masks. Useful for overriding a prefix or subnet from an acquired IP, or for merging a public prefix with a private address
+    Merge(MergeConfig),
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
@@ -67,16 +73,58 @@ pub struct DnsHostnameConfig {
 #[serde(rename_all = "camelCase")]
 pub struct IpAPIConfig {
     /// The service to use for retrieving public IP information
+    #[serde(default)]
     pub provider: IpSolverProvider,
 }
 
-#[derive(Deserialize, Serialize, Copy, Clone, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Copy, Clone, Debug, JsonSchema, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum IpSolverProvider {
     /// my-ip.io
+    #[default]
     MyIp,
 }
 
 #[derive(Deserialize, Serialize, Copy, Clone, Debug, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct LoadBalancerIngressConfig {}
+
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct StaticConfig {
+    /// Addresses to return. Addresses with mismatched types (v4 vs v6) will be ignored
+    pub addresses: Vec<IpAddr>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MergeConfig {
+    /// Each partial solver returns a section of the final IP address.
+    /// Should a solver return multiple IP addresses, the last address is used
+    pub partial_solvers: Vec<PartialSolver>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PartialSolver {
+    /// Type of solver to retrieve the address part through.
+    /// Should a solver return multiple IP addresses, the last address is used as the part
+    pub solver: PartialSolverKind,
+    /// This netmask defines the section of the solvers response that will be used in the final address. Examples: 0:0:0:ffff::, 0.0.255.0
+    pub mask: IpAddr,
+}
+
+// TODO: Generate this and SolverKind through a macro as to avoid duplication
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum PartialSolverKind {
+    /// Use a public "What-is-my-ip"-style service to deduce external IP addresses
+    #[serde(rename = "ipAPI")]
+    IpAPI(IpAPIConfig),
+    /// Resolve a hostname through DNS and return the resulting A/AAAA records as IP addresses
+    DnsHostname(DnsHostnameConfig),
+    /// Use the ingress addresses assigned to the service in .status.loadBalancer.ingress as external IP addresses
+    LoadBalancerIngress(LoadBalancerIngressConfig),
+    /// Return one or more static IP addresses. Useful as a fallback or as a partial address for the "merge" solver
+    Static(StaticConfig),
+}

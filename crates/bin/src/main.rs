@@ -4,7 +4,7 @@ use anyhow::Result;
 use clap::Parser;
 
 use tracing::{error, info, warn};
-use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 use externalip_manager_manager::{Manager, ManagerConfig};
 
