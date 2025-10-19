@@ -1,7 +1,7 @@
 # NOTE: This dockerfile relies on precompiled binaries already existing on the host at
 # target/<docker-target>/externalip-manager.
 # Example: target/linux/amd64/externalip-manager
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 ARG TARGETPLATFORM
 
 COPY target/${TARGETPLATFORM}/externalip-manager /usr/local/bin/
