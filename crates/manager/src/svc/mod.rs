@@ -3,7 +3,7 @@ use k8s_openapi::api::core::v1::Service;
 use kube::{Api, Client, api::ListParams};
 use tracing::{info, instrument};
 
-use crate::{events::EventRecorder, ip_source::ExternalIpSourceKind};
+use crate::{events::EventRecorder, external_ip_source::ExternalIpSourceKind};
 
 const ANNOTATION_CLUSTER_EXTERNAL_IP_SOURCE: &str =
     "externalip.spacebird.dev/cluster-external-ip-source";
@@ -41,7 +41,7 @@ impl ServiceFinder {
 
                 if let Some(source) = extip_cluster_source {
                     info!(
-                        msg = "Found service with cluster-external-ip-source annotation",
+                        msg = "found service with cluster-external-ip-source annotation",
                         svc = svc.metadata.name,
                         namespace = svc.metadata.namespace
                     );

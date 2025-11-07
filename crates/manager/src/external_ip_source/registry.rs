@@ -5,9 +5,8 @@ use kube::{Api, Client, Resource, api::ListParams, runtime::events::EventType};
 use tracing::error;
 
 use crate::{
-    crd::v1alpha1::ClusterExternalIPSource,
-    events::EventRecorder,
-    ip_source::{ExternalIpSource, SourceError},
+    crd::v1alpha1::ClusterExternalIPSource, events::EventRecorder,
+    external_ip_source::ExternalIpSource,
 };
 
 const REASON_EIP_ERROR: &str = "InvalidIPSource";
@@ -22,7 +21,7 @@ impl IPSourceRegistry {
     pub async fn new(
         client: Client,
         events: EventRecorder,
-    ) -> Result<IPSourceRegistry, SourceError> {
+    ) -> Result<IPSourceRegistry, kube::Error> {
         let mut registry = IPSourceRegistry {
             ceips_api: Api::all(client.clone()),
             ceips: HashMap::new(),
@@ -32,14 +31,11 @@ impl IPSourceRegistry {
         Ok(registry)
     }
 
-    pub async fn refresh(&mut self) -> Result<(), SourceError> {
+    pub async fn refresh(&mut self) -> Result<(), kube::Error> {
         let (ceips, errs): (Vec<_>, Vec<_>) = self
             .ceips_api
             .list(&ListParams::default())
-            .await
-            .map_err(|e| SourceError {
-                msg: format!("Unable to list ClusterExternalIPSources: {e}"),
-            })?
+            .await?
             .into_iter()
             .map(|ceips| {
                 let ceips_ref = ceips.object_ref(&());
@@ -53,7 +49,7 @@ impl IPSourceRegistry {
             .collect();
         let errs = errs.into_iter().map(Result::unwrap_err).collect_vec();
         for (e, ceips_ref) in errs {
-            error!(msg = "Failed to parse ClusterExternalIPSource", err = ?e);
+            error!(msg = "failed to parse ClusterExternalIPSource", err = ?e, name = ceips_ref.name, namespace = ceips_ref.namespace);
             self.events
                 .publish(
                     REASON_EIP_ERROR.to_string(),

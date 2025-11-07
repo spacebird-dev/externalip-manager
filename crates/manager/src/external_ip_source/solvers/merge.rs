@@ -7,16 +7,16 @@ use tracing::{info, instrument};
 
 use crate::{
     crd::v1alpha1::{self},
-    ip_source::{
-        self, AddressKind, SourceError,
-        solvers::{DnsHostname, IpSolver, LoadBalancerIngress, Source, Static},
+    external_ip_source::{
+        self, AddressKind, IpSourceError,
+        solvers::{DnsHostname, IpApiSolver, LoadBalancerIngress, Solver, SolverError, Static},
     },
 };
 
 #[derive(Debug)]
 struct PartialSolver {
     mask: IpAddr,
-    solver: Box<dyn Source>,
+    solver: Box<dyn Solver>,
 }
 
 #[derive(Debug)]
@@ -27,7 +27,7 @@ pub struct Merge {
 impl Merge {
     pub fn new(
         partial_solvers: Vec<v1alpha1::PartialSolver>,
-    ) -> Result<Merge, ip_source::SourceError> {
+    ) -> Result<Merge, external_ip_source::IpSourceError> {
         // nested merges do not make sense
         // we cannot check if the ip address type is correct at this point, but we can make sure that is generically valid at least
         // Ensure that the parts masks combine into a full address
@@ -39,12 +39,10 @@ impl Merge {
             })
             .sum::<u128>();
         if ![u128::from(u32::MAX), u128::MAX].contains(&mask_sum) {
-            return Err(SourceError {
-                msg: format!(
-                    "Merge part netmasks do not combine to full IPv4 address. Got {}",
-                    mask_sum
-                ),
-            });
+            return Err(IpSourceError::Malformed(format!(
+                "merge part netmasks do not combine to full IPv4 address. Got {}",
+                Ipv6Addr::from(mask_sum)
+            )));
         }
         Ok(Merge {
             solvers: partial_solvers
@@ -53,21 +51,21 @@ impl Merge {
                     mask: sol.mask,
                     solver: match sol.solver {
                         v1alpha1::PartialSolverKind::IpAPI(ip_solver) => {
-                            let boxed: Box<dyn Source> =
-                                Box::new(IpSolver::new(ip_solver.provider));
+                            let boxed: Box<dyn Solver> =
+                                Box::new(IpApiSolver::new(ip_solver.provider));
                             boxed
                         }
                         v1alpha1::PartialSolverKind::DnsHostname(dns_hostname) => {
-                            let boxed: Box<dyn Source> =
+                            let boxed: Box<dyn Solver> =
                                 Box::new(DnsHostname::new(dns_hostname.host.clone()));
                             boxed
                         }
                         v1alpha1::PartialSolverKind::LoadBalancerIngress(_) => {
-                            let boxed: Box<dyn Source> = Box::new(LoadBalancerIngress::new());
+                            let boxed: Box<dyn Solver> = Box::new(LoadBalancerIngress::new());
                             boxed
                         }
                         v1alpha1::PartialSolverKind::Static(cfg) => {
-                            let boxed: Box<dyn Source> =
+                            let boxed: Box<dyn Solver> =
                                 Box::new(Static::new(cfg.addresses.clone()));
                             boxed
                         }
@@ -86,13 +84,13 @@ fn ip_to_u128(addr: &IpAddr) -> u128 {
 }
 
 #[async_trait]
-impl Source for Merge {
+impl Solver for Merge {
     #[instrument]
     async fn get_addresses(
         &mut self,
-        kind: ip_source::AddressKind,
+        kind: external_ip_source::AddressKind,
         svc: &Service,
-    ) -> Result<Vec<std::net::IpAddr>, ip_source::SourceError> {
+    ) -> Result<Vec<std::net::IpAddr>, SolverError> {
         // Ensure that the part masks are all of the correct ip type.
         // We already know they build a valid IP address thanks to the check in new()
         if kind == AddressKind::IPv4
@@ -101,9 +99,9 @@ impl Source for Merge {
                 .iter()
                 .find(|ps| !matches!(ps.mask, IpAddr::V4(_)))
         {
-            return Err(SourceError {
-                msg: format!(
-                    "Mismatched merge mask IP type. Expected IPv4 masks, got {}",
+            return Err(SolverError {
+                reason: format!(
+                    "mismatched merge mask IP type. Expected IPv4 masks, got {}",
                     mismatch.mask
                 ),
             });
@@ -113,9 +111,9 @@ impl Source for Merge {
                 .iter()
                 .find(|ps| !matches!(ps.mask, IpAddr::V6(_)))
         {
-            return Err(SourceError {
-                msg: format!(
-                    "Mismatched merge mask IP type. Expected IPv6 masks, got {}",
+            return Err(SolverError {
+                reason: format!(
+                    "mismatched merge mask IP type. Expected IPv6 masks, got {}",
                     mismatch.mask
                 ),
             });
@@ -125,8 +123,8 @@ impl Source for Merge {
         let mut parts = vec![];
         for ps in &mut self.solvers {
             let addrs_ret = ps.solver.get_addresses(kind, svc).await?;
-            let addr = addrs_ret.last().ok_or(SourceError {
-                msg: "merge partialSolver returned no addresses".to_string(),
+            let addr = addrs_ret.last().ok_or(SolverError {
+                reason: "merge partialSolver returned no addresses".to_string(),
             })?;
             let part = ip_to_u128(addr) & ip_to_u128(&ps.mask);
             addrs.push(*addr);
@@ -145,5 +143,9 @@ impl Source for Merge {
             ?addr
         );
         Ok(vec![addr])
+    }
+
+    fn kind(&self) -> &'static str {
+        "merge"
     }
 }

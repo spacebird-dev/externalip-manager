@@ -45,7 +45,7 @@ impl EventRecorder {
             )
             .await
         {
-            warn!(msg = "Failed to publish event for failing service", err = ?e, action, reason, note = message);
+            warn!(msg = "failed to publish event for failing service", err = ?e, action, reason, note = message);
         }
     }
 }

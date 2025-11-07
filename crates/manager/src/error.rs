@@ -1,6 +1,6 @@
 use std::net::AddrParseError;
 
-use crate::{ip_source::SourceError, svc::FinderError};
+use crate::{external_ip_source::IpSourceError, svc::FinderError};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -10,19 +10,13 @@ pub enum Error {
     InvalidIpAddress(String),
     #[error("Kube error: `{0}`")]
     Kube(kube::Error),
-    #[error("IP source error: `{0}`")]
-    IpSource(SourceError),
+    #[error("IP source {name} failed: `{err}`")]
+    IPSource { name: String, err: IpSourceError },
 }
 
 impl From<kube::Error> for Error {
     fn from(value: kube::Error) -> Self {
         Error::Kube(value)
-    }
-}
-
-impl From<SourceError> for Error {
-    fn from(value: SourceError) -> Self {
-        Error::IpSource(value)
     }
 }
 

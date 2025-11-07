@@ -5,7 +5,10 @@ use itertools::Itertools;
 use k8s_openapi::api::core::v1::Service;
 use tracing::{instrument, warn};
 
-use crate::ip_source::{self, AddressKind, solvers::Source};
+use crate::external_ip_source::{
+    self, AddressKind,
+    solvers::{Solver, SolverError},
+};
 
 #[derive(Debug)]
 pub struct Static {
@@ -19,28 +22,32 @@ impl Static {
 }
 
 #[async_trait]
-impl Source for Static {
+impl Solver for Static {
     #[instrument]
     async fn get_addresses(
         &mut self,
-        kind: ip_source::AddressKind,
+        kind: external_ip_source::AddressKind,
         _: &Service,
-    ) -> Result<Vec<std::net::IpAddr>, ip_source::SourceError> {
+    ) -> Result<Vec<std::net::IpAddr>, SolverError> {
         Ok(self
             .addresses
             .clone()
             .iter()
             .filter_map(|addr| {
                 if kind == AddressKind::IPv4 && !addr.is_ipv4() {
-                    warn!(msg = "Ignoring non-IPv4 address in 'static' IPv4 address source");
+                    warn!(msg = "ignoring non-IPv4 address in 'static' IPv4 address source");
                     None
                 } else if kind == AddressKind::IPv6 && !addr.is_ipv6() {
-                    warn!(msg = "Ignoring non-IPv6 address in 'static' IPv6 address source");
+                    warn!(msg = "ignoring non-IPv6 address in 'static' IPv6 address source");
                     None
                 } else {
                     Some(*addr)
                 }
             })
             .collect_vec())
+    }
+
+    fn kind(&self) -> &'static str {
+        "static"
     }
 }

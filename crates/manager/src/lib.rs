@@ -3,7 +3,7 @@ use std::hash::RandomState;
 use std::net::IpAddr;
 
 use error::Error;
-use ip_source::ExternalIpSourceKind;
+use external_ip_source::ExternalIpSourceKind;
 use itertools::Itertools;
 use k8s_openapi::api::core::v1::{Service, ServiceSpec};
 use kube::api::{ObjectMeta, Patch, PatchParams};
@@ -14,13 +14,13 @@ use tracing::error;
 use tracing::{info, instrument};
 
 use crate::events::EventRecorder;
-use crate::ip_source::IPSourceRegistry;
+use crate::external_ip_source::IPSourceRegistry;
 use crate::svc::FinderError;
 
 pub mod crd;
 mod error;
 mod events;
-mod ip_source;
+mod external_ip_source;
 mod svc;
 
 const ACTION_UPDATE_EIPS: &str = "UpdatingExternlIPs";
@@ -60,19 +60,33 @@ impl Manager {
             Ok(svc) => svc,
             Err(e) => {
                 let err = Error::Kube(e);
-                error!(msg = "Could not retrieve list of annotated services", err = ?err);
+                error!(msg = "could not retrieve list of annotated services", err = ?err);
                 return Err(err);
             }
         };
         info!(
             msg = format!(
-                "Found {} services with externalip-manager annotations",
+                "found {} services with externalip-manager annotations",
                 svcs.len()
             )
         );
 
         for svc in svcs.iter().filter_map(|svc| svc.as_ref().ok()) {
+            let svc_name = format!(
+                "{}/{}",
+                svc.svc()
+                    .metadata
+                    .namespace
+                    .as_ref()
+                    .expect("service should be in namespace"),
+                svc.svc()
+                    .metadata
+                    .name
+                    .as_ref()
+                    .expect("service should have name")
+            );
             if let Err(e) = self.reconcile_svc(svc).await {
+                error!(msg = "failed to reconcile service", svc = svc_name);
                 errors.push(e);
             }
         }
@@ -85,7 +99,7 @@ impl Manager {
         let svc_name = svc.svc().metadata.name.clone().unwrap_or_default();
         let svc_namespace = svc.svc().metadata.namespace.clone().unwrap_or_default();
         let svc_id = format!("{}/{}", svc_name, svc_namespace);
-        info!(msg = "Processing service", service = svc_id);
+        info!(msg = "processing service", service = svc_id);
 
         let current_ips: Vec<IpAddr> = match svc
             .svc()
@@ -99,13 +113,13 @@ impl Manager {
         {
             Ok(ips) => ips,
             Err(e) => {
-                error!(msg = "Service has invalid ExternalIP addresses", e = ?e);
+                error!(msg = "service has invalid ExternalIP entries", e = ?e);
                 self.events
                     .publish(
                         "InvalidExternalIP".to_string(),
                         ACTION_UPDATE_EIPS.to_string(),
                         EventType::Warning,
-                        Some("Service has invalid externalIP entries".to_string()),
+                        Some("service has invalid externalIP entries".to_string()),
                         &svc.svc().object_ref(&()),
                     )
                     .await;
@@ -117,15 +131,15 @@ impl Manager {
         let current_ip_set: HashSet<IpAddr, RandomState> = HashSet::from_iter(current_ips);
         let new_ip_set: HashSet<IpAddr, RandomState> = HashSet::from_iter(resolved_ips);
         if current_ip_set == new_ip_set {
-            info!(msg = "Service externalIP field already up to date", svc = svc_id, addresses = ?current_ip_set);
+            info!(msg = "service externalIP field already up to date", svc = svc_id, addresses = ?current_ip_set);
             return Ok(());
         }
 
-        info!(msg = "ExternalIP mismatch for service, updating", svc = svc_id, current_addresses = ?current_ip_set, new_addresses = ?new_ip_set);
-
         if self.config.dry_run {
-            info!(msg = "Not applying changes in dry-run mode");
+            info!(msg = "externalIP mismatch for service, not applying changes in dry-run mode", svc = svc_id, current_addresses = ?current_ip_set, new_addresses = ?new_ip_set);
             return Ok(());
+        } else {
+            info!(msg = "externalIP mismatch for service, updating", svc = svc_id, current_addresses = ?current_ip_set, new_addresses = ?new_ip_set);
         }
 
         self.update_svc_addresses(svc, new_ip_set.into_iter())
@@ -144,7 +158,6 @@ impl Manager {
         let ip_source = match ip_source {
             Ok(eips) => eips,
             Err(eips) => {
-                error!(msg = "Cloud not find ExternalIPSource", source = eips);
                 self.events
                     .publish(
                         "UnknownExternalIPSource".to_string(),
@@ -155,7 +168,7 @@ impl Manager {
                     )
                     .await;
                 return Err(Error::Service(FinderError {
-                    msg: format!("Could not find ExternalIPSource {eips}"),
+                    msg: format!("could not find ExternalIPSource {eips}"),
                 }));
             }
         };
@@ -163,15 +176,6 @@ impl Manager {
         match ip_source.query(svc.svc()).await {
             Ok(ips) => Ok(ips),
             Err(e) => {
-                let svc_name = svc.svc().metadata.name.clone().unwrap_or_default();
-                let svc_namespace = svc.svc().metadata.namespace.clone().unwrap_or_default();
-                let svc_id = format!("{}/{}", svc_name, svc_namespace);
-                error!(
-                    msg = "Failed to query external IP addresses for service",
-                    svc = svc_id,
-                    address_source_kind = ip_source.kind(),
-                    address_source_name = ip_source.name()
-                );
                 self.events
                     .publish(
                         "FailedExternalIPLookup".to_string(),
@@ -181,7 +185,10 @@ impl Manager {
                         &svc.svc().object_ref(&()),
                     )
                     .await;
-                Err(e.into())
+                Err(Error::IPSource {
+                    name: ip_source.name(),
+                    err: e,
+                })
             }
         }
     }
@@ -213,7 +220,7 @@ impl Manager {
             .await
         {
             Ok(_) => {
-                info!(msg = "Service updated", svc = svc_id, ?address_strings);
+                info!(msg = "service updated", svc = svc_id, ?address_strings);
                 self.events
                     .publish(
                         "ExternalIPsUpdated".to_string(),
@@ -225,7 +232,7 @@ impl Manager {
                     .await;
             }
             Err(e) => {
-                error!(msg = "Failed to update service", svc = svc_id, err = ?e);
+                error!(msg = "failed to update service", svc = svc_id, err = ?e);
                 return Err(e.into());
             }
         };
