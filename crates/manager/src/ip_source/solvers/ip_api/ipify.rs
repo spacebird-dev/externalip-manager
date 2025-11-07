@@ -10,31 +10,24 @@ use crate::ip_source::{
     solvers::ip_api::{IpProvider, IpSolverError},
 };
 
-const MY_IP_URL_V4: &str = "https://api4.my-ip.io/v2/ip.json";
-const MY_IP_URL_V6: &str = "https://api6.my-ip.io/v2/ip.json";
+const IPIFY_URL_V4: &str = "https://api.ipify.org?format=json";
+const IPIFY_URL_V6: &str = "https://api6.ipify.org?format=json";
 
 #[derive(Deserialize, Debug, Clone, Copy)]
-enum MyIpType {
-    IPv4,
-    IPv6,
-}
-#[derive(Deserialize, Debug, Clone, Copy)]
 #[allow(dead_code)]
-struct MyIpResponse {
-    success: bool,
+struct IpifyResponse {
     ip: IpAddr,
-    r#type: MyIpType,
 }
 
 #[derive(Debug)]
-pub struct MyIp {}
-impl MyIp {
-    pub fn new() -> MyIp {
-        MyIp {}
+pub struct Ipify {}
+impl Ipify {
+    pub fn new() -> Ipify {
+        Ipify {}
     }
 }
 #[async_trait]
-impl IpProvider for MyIp {
+impl IpProvider for Ipify {
     #[instrument(skip(self, client))]
     async fn get_addresses(
         &mut self,
@@ -43,8 +36,8 @@ impl IpProvider for MyIp {
     ) -> Result<Vec<std::net::IpAddr>, IpSolverError> {
         let res = client
             .get(match kind {
-                AddressKind::IPv4 => MY_IP_URL_V4,
-                AddressKind::IPv6 => MY_IP_URL_V6,
+                AddressKind::IPv4 => IPIFY_URL_V4,
+                AddressKind::IPv6 => IPIFY_URL_V6,
             })
             .timeout(Duration::from_secs(10))
             .send()
@@ -52,7 +45,7 @@ impl IpProvider for MyIp {
         if res.status() == StatusCode::TOO_MANY_REQUESTS {
             return Err(IpSolverError::RateLimited);
         }
-        let res = res.error_for_status()?.json::<MyIpResponse>().await?;
+        let res = res.error_for_status()?.json::<IpifyResponse>().await?;
         Ok(vec![res.ip])
     }
 }

@@ -67,6 +67,7 @@ spec:
                               default: myIp
                               description: The service to use for retrieving public IP information
                               enum:
+                              - ipify
                               - myIp
                               type: string
                           type: object
@@ -116,6 +117,7 @@ spec:
                                             default: myIp
                                             description: The service to use for retrieving public IP information
                                             enum:
+                                            - ipify
                                             - myIp
                                             type: string
                                         type: object
@@ -204,6 +206,7 @@ spec:
                               default: myIp
                               description: The service to use for retrieving public IP information
                               enum:
+                              - ipify
                               - myIp
                               type: string
                           type: object
@@ -253,6 +256,7 @@ spec:
                                             default: myIp
                                             description: The service to use for retrieving public IP information
                                             enum:
+                                            - ipify
                                             - myIp
                                             type: string
                                         type: object
