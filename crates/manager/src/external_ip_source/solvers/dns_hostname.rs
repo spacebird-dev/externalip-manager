@@ -1,16 +1,14 @@
 use std::net::IpAddr;
 
 use async_trait::async_trait;
-use hickory_resolver::{
-    ResolveError, Resolver, config::ResolverConfig, name_server::TokioConnectionProvider,
-};
+use hickory_resolver::{Resolver, config::ResolverConfig, name_server::TokioConnectionProvider};
 use itertools::Itertools;
 use k8s_openapi::api::core::v1::Service;
 use tracing::instrument;
 
-use crate::ip_source;
+use crate::external_ip_source::{self, solvers::SolverError};
 
-use super::{Source, SourceError};
+use super::Solver;
 
 #[derive(Debug)]
 pub struct DnsHostname {
@@ -32,36 +30,38 @@ impl DnsHostname {
 }
 
 #[async_trait]
-impl Source for DnsHostname {
+impl Solver for DnsHostname {
     #[instrument]
     async fn get_addresses(
         &mut self,
-        kind: ip_source::AddressKind,
+        kind: external_ip_source::AddressKind,
         _: &Service,
-    ) -> Result<Vec<std::net::IpAddr>, ip_source::SourceError> {
+    ) -> Result<Vec<std::net::IpAddr>, SolverError> {
         match kind {
-            ip_source::AddressKind::IPv4 => Ok(self
+            external_ip_source::AddressKind::IPv4 => Ok(self
                 .resolver
                 .ipv4_lookup(self.host.clone())
-                .await?
+                .await
+                .map_err(|e| SolverError {
+                    reason: e.to_string(),
+                })?
                 .iter()
                 .map(|a| IpAddr::V4(a.0))
                 .collect_vec()),
-            ip_source::AddressKind::IPv6 => Ok(self
+            external_ip_source::AddressKind::IPv6 => Ok(self
                 .resolver
                 .ipv6_lookup(self.host.clone())
-                .await?
+                .await
+                .map_err(|e| SolverError {
+                    reason: e.to_string(),
+                })?
                 .iter()
                 .map(|a| IpAddr::V6(a.0))
                 .collect_vec()),
         }
     }
-}
 
-impl From<ResolveError> for SourceError {
-    fn from(value: ResolveError) -> Self {
-        SourceError {
-            msg: value.to_string(),
-        }
+    fn kind(&self) -> &'static str {
+        "dnsHostname"
     }
 }
