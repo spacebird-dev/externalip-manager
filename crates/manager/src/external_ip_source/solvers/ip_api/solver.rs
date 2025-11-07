@@ -80,35 +80,35 @@ impl Solver for IpApiSolver {
         }
 
         let resp = self.inner.get_addresses(kind, &self.client).await;
-        match &resp.response {
-            Ok(addrs) => {
-                self.cache = Some(resp.clone());
-                Ok(addrs.clone())
-            }
-            Err(e) => {
-                if matches!(e, IpProviderError::RateLimited { remaining: _ }) {
-                    let mut new_cache = resp.clone();
-                    let mut err = e.clone();
-                    if let Some(cached) = &self.cache
-                        && matches!(
-                            &cached.response,
-                            Err(IpProviderError::RateLimited { remaining: _ })
-                        )
-                    {
-                        let new_timeout =
-                            (new_cache.timeout * 2).min(RATELIMIT_BACKOFF_DURATION_MAX);
-                        // Exponential backoff
-                        new_cache.timeout = new_timeout;
-                        err = IpProviderError::RateLimited {
+        let (res, cache) = match &resp.response {
+            Ok(addrs) => (Ok(addrs.clone()), Some(resp.clone())),
+            Err(e) if matches!(e, IpProviderError::RateLimited { remaining: _ }) => {
+                if let Some(cached) = &self.cache
+                    && matches!(
+                        &cached.response,
+                        Err(IpProviderError::RateLimited { remaining: _ })
+                    )
+                {
+                    // Exponential backoff
+                    let new_timeout = (cached.timeout * 2).min(RATELIMIT_BACKOFF_DURATION_MAX);
+                    let mut exp_cache =
+                        IpProviderResponse::new(new_timeout, cached.response.clone());
+                    exp_cache.timeout = new_timeout;
+                    (
+                        Err(IpProviderError::RateLimited {
                             remaining: new_timeout,
-                        };
-                    }
-                    self.cache = Some(new_cache);
-                    return Err(err.into());
+                        }
+                        .into()),
+                        Some(exp_cache),
+                    )
+                } else {
+                    (Err(e.into()), None)
                 }
-                Err(e.into())
             }
-        }
+            Err(e) => (Err(e.into()), None),
+        };
+        self.cache = cache;
+        res
     }
 
     fn kind(&self) -> &'static str {
