@@ -83,6 +83,8 @@ pub enum IpSolverProvider {
     /// my-ip.io
     #[default]
     MyIp,
+    // https://www.ipify.org/
+    Ipify,
 }
 
 #[derive(Deserialize, Serialize, Copy, Clone, Debug, JsonSchema)]

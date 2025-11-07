@@ -82,7 +82,7 @@ The following solvers are currently available:
     - `host`: The host to resolve
 - `ìpAPI`: Uses a "what-is-my-ip" style API to retrieve public addresses
   - Parameters:
-    - `provider`: Which API Provider to use. Currently, the only option is [`myIp`](https://my-ip.io)
+    - `provider`: Which API Provider to use. Current options are [`myIp`](https://my-ip.io) and [`ipify`](https://www.ipify.org/)
 - `loadBalancerIngress`: Use the addresses specified in the `.status.loadBalancer.ingress` field
   - Use case: You have MetalLB or a similar LoadBalancer providing you with some public addresses
   - Parameters: None
