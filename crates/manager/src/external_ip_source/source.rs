@@ -1,19 +1,16 @@
 use std::{
     fmt::{Debug, Display},
     net::IpAddr,
+    time::Duration,
 };
 
 use k8s_openapi::api::core::v1::Service;
+use tokio::time::timeout;
 use tracing::{debug, error, info, instrument, warn};
 
 use crate::{
-    crd::v1alpha1::{self, CLUSTER_EXTERNAL_IP_SOURCE_KIND},
-    external_ip_source::{
-        self, IpSourceError,
-        solvers::{
-            DnsHostname, IpApiSolver, LoadBalancerIngress, Merge, Solver, SolverError, Static,
-        },
-    },
+    crd::v1alpha1::{self, CLUSTER_EXTERNAL_IP_SOURCE_KIND, SolverKind},
+    external_ip_source::{self, IpSourceError, registry::SolverRegistry, solvers::SolverError},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -44,15 +41,16 @@ pub struct ExternalIpSource {
 impl ExternalIpSource {
     #[instrument]
     pub async fn query(
-        &mut self,
+        &self,
         svc: &Service,
+        solvers: &SolverRegistry,
     ) -> Result<Vec<IpAddr>, external_ip_source::IpSourceError> {
         let mut addrs = vec![];
-        if let Some(v4) = &mut self.v4 {
-            addrs.extend(v4.query(AddressKind::IPv4, svc).await?);
+        if let Some(v4) = &self.v4 {
+            addrs.extend(v4.query(AddressKind::IPv4, svc, solvers).await?);
         }
-        if let Some(v6) = &mut self.v6 {
-            addrs.extend(v6.query(AddressKind::IPv6, svc).await?);
+        if let Some(v6) = &self.v6 {
+            addrs.extend(v6.query(AddressKind::IPv6, svc, solvers).await?);
         }
         Ok(addrs)
     }
@@ -91,8 +89,15 @@ impl TryFrom<v1alpha1::ClusterExternalIPSource> for ExternalIpSource {
         })
     }
 }
+impl TryFrom<&v1alpha1::ClusterExternalIPSource> for ExternalIpSource {
+    type Error = IpSourceError;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    fn try_from(value: &v1alpha1::ClusterExternalIPSource) -> Result<Self, Self::Error> {
+        ExternalIpSource::try_from((*value).clone())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AddressKind {
     IPv4,
     IPv6,
@@ -113,20 +118,21 @@ impl Display for AddressKind {
 /// A set of solvers that can be queried for external IP addresses
 #[derive(Debug)]
 struct SolverList {
-    solvers: Vec<Box<dyn Solver>>,
+    solver_refs: Vec<SolverKind>,
     query_mode: QueryMode,
 }
 
 impl SolverList {
     #[instrument]
     async fn query(
-        &mut self,
+        &self,
         kind: AddressKind,
         svc: &Service,
+        solvers: &SolverRegistry,
     ) -> Result<Vec<IpAddr>, IpSourceError> {
         // should be guaranteed from our TryFrom impl
         assert!(
-            !self.solvers.is_empty(),
+            !self.solver_refs.is_empty(),
             "at least one solver must be defined"
         );
 
@@ -136,18 +142,30 @@ impl SolverList {
             svc.metadata.namespace.clone().unwrap_or_default(),
             svc.metadata.name.clone().unwrap_or_default()
         );
-        for solver in &mut self.solvers {
-            match solver.get_addresses(kind, svc).await {
+        for solv_ref in &self.solver_refs {
+            let solver = solvers
+                .get(&((*solv_ref).clone(), kind))
+                .ok_or(IpSourceError::Solver(SolverError {
+                    reason: format!("solver {:?} not found", (solv_ref, kind)),
+                }))?;
+            let mut guard = timeout(Duration::from_secs(5), solver.write())
+                .await
+                .map_err(|_| {
+                    IpSourceError::Solver(SolverError {
+                        reason: "timed out waiting for solver".to_string(),
+                    })
+                })?;
+            match guard.get_addresses(kind, svc, solvers).await {
                 Ok(addrs) => {
                     if addrs.is_empty() {
                         info!(
                             msg = "solver returned no addresses",
                             svc = svc_name,
-                            solver = solver.kind()
+                            solver = ?solv_ref
                         );
                         continue;
                     }
-                    debug!(msg = "retrieved externalIP addresses from solver", svc = svc_name, solver = solver.kind(), addresses = ?addrs);
+                    debug!(msg = "retrieved externalIP addresses from solver", svc = svc_name, solver = ?solv_ref, addresses = ?addrs);
                     match self.query_mode {
                         QueryMode::FirstFound => {
                             info!(
@@ -165,7 +183,7 @@ impl SolverList {
                 Err(e) => {
                     warn!(
                         msg = "failed to query solver",
-                        solver = solver.kind(),
+                        solver = ?solv_ref,
                         err = e.to_string(),
                         svc = svc_name
                     );
@@ -198,36 +216,8 @@ impl TryFrom<v1alpha1::IpSolversConfig> for SolverList {
                 "sources list is empty".to_string(),
             ));
         }
-        let sources = value
-            .solvers
-            .iter()
-            .map(|s| match s {
-                v1alpha1::SolverKind::IpAPI(ip_solver) => {
-                    let boxed: Box<dyn Solver> = Box::new(IpApiSolver::new(ip_solver.provider));
-                    Ok(boxed)
-                }
-                v1alpha1::SolverKind::DnsHostname(dns_hostname) => {
-                    let boxed: Box<dyn Solver> =
-                        Box::new(DnsHostname::new(dns_hostname.host.clone()));
-                    Ok(boxed)
-                }
-                v1alpha1::SolverKind::LoadBalancerIngress(_) => {
-                    let boxed: Box<dyn Solver> = Box::new(LoadBalancerIngress::new());
-                    Ok(boxed)
-                }
-                v1alpha1::SolverKind::Static(cfg) => {
-                    let boxed: Box<dyn Solver> = Box::new(Static::new(cfg.addresses.clone()));
-                    Ok(boxed)
-                }
-                v1alpha1::SolverKind::Merge(merge_config) => {
-                    let boxed: Box<dyn Solver> =
-                        Box::new(Merge::new(merge_config.partial_solvers.clone())?);
-                    Ok(boxed)
-                }
-            })
-            .collect::<Result<Vec<Box<dyn Solver>>, IpSourceError>>()?;
         Ok(SolverList {
-            solvers: sources,
+            solver_refs: value.solvers,
             query_mode: value.query_mode.unwrap_or_default().into(),
         })
     }

@@ -1,10 +1,10 @@
 use std::net::IpAddr;
+use std::time::Instant;
 use std::{fmt::Debug, time::Duration};
 
 use async_trait::async_trait;
 use provider_myip::MyIp;
 use reqwest::Client;
-use tokio::time::Instant;
 
 use crate::external_ip_source::solvers::SolverError;
 

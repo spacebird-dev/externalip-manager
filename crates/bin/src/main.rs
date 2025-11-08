@@ -29,7 +29,7 @@ async fn main() -> Result<()> {
         .with_level(true)
         .with_current_span(false)
         .with_span_list(false)
-        .with_target(true);
+        .with_target(false);
     tracing_subscriber::registry()
         .with(filter_layer)
         .with(fmt_layer)
