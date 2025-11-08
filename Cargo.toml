@@ -6,7 +6,7 @@ resolver = "2"
 authors = ["Max Hösel <github@maxhoesel.de>"]
 license-file = "LICENSE"
 description = "Manage ExternalIP assignments on Kubernetes Services"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2024"
 
 [profile.release]
