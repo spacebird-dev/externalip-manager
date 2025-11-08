@@ -98,7 +98,7 @@ impl Manager {
     async fn reconcile_svc(&mut self, svc: &ExternalIpSvc) -> Result<(), Error> {
         let svc_name = svc.svc().metadata.name.clone().unwrap_or_default();
         let svc_namespace = svc.svc().metadata.namespace.clone().unwrap_or_default();
-        let svc_id = format!("{}/{}", svc_name, svc_namespace);
+        let svc_id = format!("{}/{}", svc_namespace, svc_name);
         info!(msg = "processing service", service = svc_id);
 
         let current_ips: Vec<IpAddr> = match svc
