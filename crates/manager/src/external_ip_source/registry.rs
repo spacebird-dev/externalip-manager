@@ -76,13 +76,16 @@ impl IPSourceRegistry {
                 let mut solvers = vec![];
                 if let Some(ipv4) = ceips_apiobj.spec.ipv4 {
                     solvers.extend(ipv4.solvers.clone().into_iter().flat_map(|s| {
-                        match s {
-                            SolverKind::Merge(merge_config) => merge_config
-                                .partial_solvers
-                                .iter()
-                                .map(|ps| (SolverKind::from(&ps.solver), AddressKind::IPv4))
-                                .collect_vec()
-                                .into_iter(),
+                        match &s {
+                            SolverKind::Merge(merge_config) => {
+                                let mut solvers = merge_config
+                                    .partial_solvers
+                                    .iter()
+                                    .map(|ps| (SolverKind::from(&ps.solver), AddressKind::IPv4))
+                                    .collect_vec();
+                                solvers.push((s, AddressKind::IPv4));
+                                solvers.into_iter()
+                            }
                             _ => vec![(s, AddressKind::IPv4)]
                                 .into_iter()
                                 .collect_vec()
@@ -92,13 +95,16 @@ impl IPSourceRegistry {
                 }
                 if let Some(ipv6) = ceips_apiobj.spec.ipv6 {
                     solvers.extend(ipv6.solvers.clone().into_iter().flat_map(|s| {
-                        match s {
-                            SolverKind::Merge(merge_config) => merge_config
-                                .partial_solvers
-                                .iter()
-                                .map(|ps| (SolverKind::from(&ps.solver), AddressKind::IPv6))
-                                .collect_vec()
-                                .into_iter(),
+                        match &s {
+                            SolverKind::Merge(merge_config) => {
+                                let mut solvers = merge_config
+                                    .partial_solvers
+                                    .iter()
+                                    .map(|ps| (SolverKind::from(&ps.solver), AddressKind::IPv6))
+                                    .collect_vec();
+                                solvers.push((s, AddressKind::IPv6));
+                                solvers.into_iter()
+                            }
                             _ => vec![(s, AddressKind::IPv6)]
                                 .into_iter()
                                 .collect_vec()
