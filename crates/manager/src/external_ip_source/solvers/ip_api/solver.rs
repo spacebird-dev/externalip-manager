@@ -9,6 +9,7 @@ use crate::{
     crd::v1alpha1,
     external_ip_source::{
         self,
+        registry::SolverRegistry,
         solvers::{
             SolverError,
             ip_api::{IpProviderResponse, provider_ipify::Ipify},
@@ -24,21 +25,19 @@ const RATELIMIT_BACKOFF_DURATION_MAX: Duration = Duration::from_secs(60 * 60 * 2
 pub struct IpApiSolver {
     client: Client,
     inner: Box<dyn IpProvider>,
-    name: &'static str,
     cache: Option<IpProviderResponse>,
 }
 
 impl IpApiSolver {
     pub fn new(provider: v1alpha1::IpSolverProvider) -> IpApiSolver {
-        let (inner, provider_name): (Box<dyn IpProvider>, &'static str) = match provider {
-            v1alpha1::IpSolverProvider::MyIp => (Box::new(MyIp::new()), "ipAPI (myIP)"),
-            v1alpha1::IpSolverProvider::Ipify => (Box::new(Ipify::new()), "ipAPI (ipify)"),
+        let inner: Box<dyn IpProvider> = match provider {
+            v1alpha1::IpSolverProvider::MyIp => Box::new(MyIp::new()),
+            v1alpha1::IpSolverProvider::Ipify => Box::new(Ipify::new()),
         };
         IpApiSolver {
             client: Client::new(),
             inner,
             cache: None,
-            name: provider_name,
         }
     }
     #[cfg(test)]
@@ -47,7 +46,6 @@ impl IpApiSolver {
             client: Client::new(),
             inner,
             cache: None,
-            name: "test",
         }
     }
 }
@@ -59,6 +57,7 @@ impl Solver for IpApiSolver {
         &mut self,
         kind: external_ip_source::AddressKind,
         _: &Service,
+        _: &SolverRegistry,
     ) -> Result<Vec<std::net::IpAddr>, SolverError> {
         if let Some(cached) = &self.cache
             && !cached.expired()
@@ -106,14 +105,12 @@ impl Solver for IpApiSolver {
         self.cache = cache;
         res
     }
-
-    fn kind(&self) -> &'static str {
-        self.name
-    }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use anyhow::Result;
 
     use crate::external_ip_source::AddressKind;
@@ -153,12 +150,12 @@ mod tests {
             IpProviderResponse::new(CACHE_TIMEOUT, Ok(vec!["1.1.1.1".parse().unwrap()])),
         ])));
         let result = solv
-            .get_addresses(AddressKind::IPv4, &Service::default())
+            .get_addresses(AddressKind::IPv4, &Service::default(), &HashMap::default())
             .await?;
         assert_eq!(result, expected);
         // Second call should reuse cached address
         let result = solv
-            .get_addresses(AddressKind::IPv4, &Service::default())
+            .get_addresses(AddressKind::IPv4, &Service::default(), &HashMap::default())
             .await?;
         assert_eq!(result, expected);
         Ok(())
@@ -172,12 +169,12 @@ mod tests {
             IpProviderResponse::new(CACHE_TIMEOUT, Ok(expected.clone())),
         ])));
         // first call to fill cache
-        solv.get_addresses(AddressKind::IPv4, &Service::default())
+        solv.get_addresses(AddressKind::IPv4, &Service::default(), &HashMap::default())
             .await?;
         tokio::time::sleep(CACHE_TIMEOUT + SLEEP_EXTRA).await;
         // Call after sleep should be second address
         let result = solv
-            .get_addresses(AddressKind::IPv4, &Service::default())
+            .get_addresses(AddressKind::IPv4, &Service::default(), &HashMap::default())
             .await?;
         assert_eq!(result, expected);
         Ok(())
@@ -189,7 +186,7 @@ mod tests {
             IpProviderResponse::new(CACHE_TIMEOUT, Err(IpProviderError::RateLimited)),
         ])));
         let result = solv
-            .get_addresses(AddressKind::IPv4, &Service::default())
+            .get_addresses(AddressKind::IPv4, &Service::default(), &HashMap::default())
             .await;
         assert!(result.is_err());
         Ok(())
@@ -203,18 +200,18 @@ mod tests {
             IpProviderResponse::new(CACHE_TIMEOUT, Ok(expected.clone())),
         ])));
         let result = solv
-            .get_addresses(AddressKind::IPv4, &Service::default())
+            .get_addresses(AddressKind::IPv4, &Service::default(), &HashMap::default())
             .await;
         assert!(result.is_err());
         // Immediate second query, should still return a rate limit error
         let result = solv
-            .get_addresses(AddressKind::IPv4, &Service::default())
+            .get_addresses(AddressKind::IPv4, &Service::default(), &HashMap::default())
             .await;
         assert!(result.is_err());
         tokio::time::sleep(CACHE_TIMEOUT + SLEEP_EXTRA).await;
         // After waitlimit timeout, the request succeeds
         let result = solv
-            .get_addresses(AddressKind::IPv4, &Service::default())
+            .get_addresses(AddressKind::IPv4, &Service::default(), &HashMap::default())
             .await?;
         assert_eq!(result, expected);
         Ok(())
@@ -230,13 +227,13 @@ mod tests {
         ])));
         // Trigger ratelimit
         let result = solv
-            .get_addresses(AddressKind::IPv4, &Service::default())
+            .get_addresses(AddressKind::IPv4, &Service::default(), &HashMap::default())
             .await;
         assert!(result.is_err());
         tokio::time::sleep(CACHE_TIMEOUT + SLEEP_EXTRA).await;
         // Still ratelimited
         let result = solv
-            .get_addresses(AddressKind::IPv4, &Service::default())
+            .get_addresses(AddressKind::IPv4, &Service::default(), &HashMap::default())
             .await;
         assert!(result.is_err());
         // Ratelimited with exponential backoff

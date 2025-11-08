@@ -48,14 +48,25 @@ impl Manager {
             svc_finder: ServiceFinder::new(events.clone()).await?,
             client: client.clone(),
             events: events.clone(),
-            ip_sources: IPSourceRegistry::new(client.clone(), events.clone()).await?,
+            ip_sources: IPSourceRegistry::new(client.clone(), events.clone())
+                .await
+                .map_err(|e| Error::IPSource {
+                    name: "registry".to_string(),
+                    err: e,
+                })?,
         })
     }
 
     #[instrument(skip(self))]
     pub async fn reconcile_svcs(&mut self) -> Result<Vec<Error>, Error> {
         let mut errors = vec![];
-        self.ip_sources.refresh().await?;
+        self.ip_sources
+            .refresh()
+            .await
+            .map_err(|e| Error::IPSource {
+                name: "registry".to_string(),
+                err: e,
+            })?;
         let svcs = match self.svc_finder.find_annotated_svcs().await {
             Ok(svc) => svc,
             Err(e) => {
@@ -173,7 +184,7 @@ impl Manager {
             }
         };
 
-        match ip_source.query(svc.svc()).await {
+        match ip_source.query(svc.svc(), self.ip_sources.solvers()).await {
             Ok(ips) => Ok(ips),
             Err(e) => {
                 self.events

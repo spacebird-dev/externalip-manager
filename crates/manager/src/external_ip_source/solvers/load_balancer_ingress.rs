@@ -6,7 +6,7 @@ use k8s_openapi::api::core::v1::Service;
 use tracing::instrument;
 
 use super::Solver;
-use crate::external_ip_source::{self, solvers::SolverError};
+use crate::external_ip_source::{self, registry::SolverRegistry, solvers::SolverError};
 
 #[derive(Debug)]
 pub struct LoadBalancerIngress {}
@@ -24,6 +24,7 @@ impl Solver for LoadBalancerIngress {
         &mut self,
         kind: external_ip_source::AddressKind,
         svc: &Service,
+        _: &SolverRegistry,
     ) -> Result<Vec<std::net::IpAddr>, SolverError> {
         Ok(svc
             .clone()
@@ -51,9 +52,5 @@ impl Solver for LoadBalancerIngress {
                 })
             })
             .collect_vec())
-    }
-
-    fn kind(&self) -> &'static str {
-        "loadBalancerIngress"
     }
 }

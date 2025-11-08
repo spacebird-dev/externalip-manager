@@ -7,6 +7,7 @@ use tracing::{instrument, warn};
 
 use crate::external_ip_source::{
     self, AddressKind,
+    registry::SolverRegistry,
     solvers::{Solver, SolverError},
 };
 
@@ -28,6 +29,7 @@ impl Solver for Static {
         &mut self,
         kind: external_ip_source::AddressKind,
         _: &Service,
+        _: &SolverRegistry,
     ) -> Result<Vec<std::net::IpAddr>, SolverError> {
         Ok(self
             .addresses
@@ -45,9 +47,5 @@ impl Solver for Static {
                 }
             })
             .collect_vec())
-    }
-
-    fn kind(&self) -> &'static str {
-        "static"
     }
 }

@@ -46,7 +46,7 @@ pub enum QueryMode {
     All,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, Hash, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub enum SolverKind {
     /// Use a public "What-is-my-ip"-style service to deduce external IP addresses
@@ -61,15 +61,30 @@ pub enum SolverKind {
     /// Merge the results from multiple solvers into a single address through masks. Useful for overriding a prefix or subnet from an acquired IP, or for merging a public prefix with a private address
     Merge(MergeConfig),
 }
+impl From<PartialSolverKind> for SolverKind {
+    fn from(value: PartialSolverKind) -> Self {
+        match value {
+            PartialSolverKind::IpAPI(c) => SolverKind::IpAPI(c),
+            PartialSolverKind::DnsHostname(c) => SolverKind::DnsHostname(c),
+            PartialSolverKind::LoadBalancerIngress(c) => SolverKind::LoadBalancerIngress(c),
+            PartialSolverKind::Static(c) => SolverKind::Static(c),
+        }
+    }
+}
+impl From<&PartialSolverKind> for SolverKind {
+    fn from(value: &PartialSolverKind) -> Self {
+        SolverKind::from((*value).clone())
+    }
+}
 
-#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct DnsHostnameConfig {
     /// The host to resolve.
     pub host: String,
 }
 
-#[derive(Deserialize, Serialize, Copy, Clone, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Copy, Clone, Debug, JsonSchema, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct IpAPIConfig {
     /// The service to use for retrieving public IP information
@@ -77,7 +92,7 @@ pub struct IpAPIConfig {
     pub provider: IpSolverProvider,
 }
 
-#[derive(Deserialize, Serialize, Copy, Clone, Debug, JsonSchema, Default)]
+#[derive(Deserialize, Serialize, Copy, Clone, Debug, JsonSchema, Default, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum IpSolverProvider {
     /// my-ip.io
@@ -87,18 +102,18 @@ pub enum IpSolverProvider {
     Ipify,
 }
 
-#[derive(Deserialize, Serialize, Copy, Clone, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Copy, Clone, Debug, JsonSchema, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct LoadBalancerIngressConfig {}
 
-#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct StaticConfig {
     /// Addresses to return. Addresses with mismatched types (v4 vs v6) will be ignored
     pub addresses: Vec<IpAddr>,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct MergeConfig {
     /// Each partial solver returns a section of the final IP address.
@@ -106,7 +121,7 @@ pub struct MergeConfig {
     pub partial_solvers: Vec<PartialSolver>,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct PartialSolver {
     /// Type of solver to retrieve the address part through.
@@ -117,7 +132,7 @@ pub struct PartialSolver {
 }
 
 // TODO: Generate this and SolverKind through a macro as to avoid duplication
-#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, Hash, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum PartialSolverKind {
     /// Use a public "What-is-my-ip"-style service to deduce external IP addresses

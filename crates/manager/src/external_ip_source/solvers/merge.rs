@@ -1,27 +1,25 @@
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::{
+    net::{IpAddr, Ipv4Addr, Ipv6Addr},
+    time::Duration,
+};
 
 use async_trait::async_trait;
-use itertools::Itertools;
 use k8s_openapi::api::core::v1::Service;
-use tracing::{info, instrument};
+use tokio::time::timeout;
+use tracing::info;
 
 use crate::{
-    crd::v1alpha1::{self},
+    crd::v1alpha1::{self, SolverKind},
     external_ip_source::{
         self, AddressKind, IpSourceError,
-        solvers::{DnsHostname, IpApiSolver, LoadBalancerIngress, Solver, SolverError, Static},
+        registry::SolverRegistry,
+        solvers::{Solver, SolverError},
     },
 };
 
 #[derive(Debug)]
-struct PartialSolver {
-    mask: IpAddr,
-    solver: Box<dyn Solver>,
-}
-
-#[derive(Debug)]
 pub struct Merge {
-    solvers: Vec<PartialSolver>,
+    partial_solvers: Vec<v1alpha1::PartialSolver>,
 }
 
 impl Merge {
@@ -44,35 +42,7 @@ impl Merge {
                 Ipv6Addr::from(mask_sum)
             )));
         }
-        Ok(Merge {
-            solvers: partial_solvers
-                .into_iter()
-                .map(|sol| PartialSolver {
-                    mask: sol.mask,
-                    solver: match sol.solver {
-                        v1alpha1::PartialSolverKind::IpAPI(ip_solver) => {
-                            let boxed: Box<dyn Solver> =
-                                Box::new(IpApiSolver::new(ip_solver.provider));
-                            boxed
-                        }
-                        v1alpha1::PartialSolverKind::DnsHostname(dns_hostname) => {
-                            let boxed: Box<dyn Solver> =
-                                Box::new(DnsHostname::new(dns_hostname.host.clone()));
-                            boxed
-                        }
-                        v1alpha1::PartialSolverKind::LoadBalancerIngress(_) => {
-                            let boxed: Box<dyn Solver> = Box::new(LoadBalancerIngress::new());
-                            boxed
-                        }
-                        v1alpha1::PartialSolverKind::Static(cfg) => {
-                            let boxed: Box<dyn Solver> =
-                                Box::new(Static::new(cfg.addresses.clone()));
-                            boxed
-                        }
-                    },
-                })
-                .collect_vec(),
-        })
+        Ok(Merge { partial_solvers })
     }
 }
 
@@ -85,17 +55,18 @@ fn ip_to_u128(addr: &IpAddr) -> u128 {
 
 #[async_trait]
 impl Solver for Merge {
-    #[instrument]
+    //#[instrument]
     async fn get_addresses(
         &mut self,
         kind: external_ip_source::AddressKind,
         svc: &Service,
+        solvers: &SolverRegistry,
     ) -> Result<Vec<std::net::IpAddr>, SolverError> {
         // Ensure that the part masks are all of the correct ip type.
         // We already know they build a valid IP address thanks to the check in new()
         if kind == AddressKind::IPv4
             && let Some(mismatch) = self
-                .solvers
+                .partial_solvers
                 .iter()
                 .find(|ps| !matches!(ps.mask, IpAddr::V4(_)))
         {
@@ -107,7 +78,7 @@ impl Solver for Merge {
             });
         } else if kind == AddressKind::IPv6
             && let Some(mismatch) = self
-                .solvers
+                .partial_solvers
                 .iter()
                 .find(|ps| !matches!(ps.mask, IpAddr::V6(_)))
         {
@@ -121,8 +92,18 @@ impl Solver for Merge {
 
         let mut addrs = vec![];
         let mut parts = vec![];
-        for ps in &mut self.solvers {
-            let addrs_ret = ps.solver.get_addresses(kind, svc).await?;
+        for ps in &self.partial_solvers {
+            let solver = solvers
+                .get(&(SolverKind::from(&ps.solver), kind))
+                .ok_or(SolverError {
+                    reason: format!("solver {:?} not found", ps),
+                })?;
+            let mut guard = timeout(Duration::from_secs(10), solver.write())
+                .await
+                .map_err(|_| SolverError {
+                    reason: "timed out waiting for solver lock".to_string(),
+                })?;
+            let addrs_ret = guard.get_addresses(kind, svc, solvers).await?;
             let addr = addrs_ret.last().ok_or(SolverError {
                 reason: "merge partialSolver returned no addresses".to_string(),
             })?;
@@ -143,9 +124,5 @@ impl Solver for Merge {
             ?addr
         );
         Ok(vec![addr])
-    }
-
-    fn kind(&self) -> &'static str {
-        "merge"
     }
 }

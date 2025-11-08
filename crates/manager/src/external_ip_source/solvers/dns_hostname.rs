@@ -6,7 +6,7 @@ use itertools::Itertools;
 use k8s_openapi::api::core::v1::Service;
 use tracing::instrument;
 
-use crate::external_ip_source::{self, solvers::SolverError};
+use crate::external_ip_source::{self, registry::SolverRegistry, solvers::SolverError};
 
 use super::Solver;
 
@@ -36,6 +36,7 @@ impl Solver for DnsHostname {
         &mut self,
         kind: external_ip_source::AddressKind,
         _: &Service,
+        _: &SolverRegistry,
     ) -> Result<Vec<std::net::IpAddr>, SolverError> {
         match kind {
             external_ip_source::AddressKind::IPv4 => Ok(self
@@ -59,9 +60,5 @@ impl Solver for DnsHostname {
                 .map(|a| IpAddr::V6(a.0))
                 .collect_vec()),
         }
-    }
-
-    fn kind(&self) -> &'static str {
-        "dnsHostname"
     }
 }
