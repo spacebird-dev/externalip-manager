@@ -96,10 +96,10 @@ impl IPSourceRegistry {
                             SolverKind::Merge(merge_config) => merge_config
                                 .partial_solvers
                                 .iter()
-                                .map(|ps| (SolverKind::from(&ps.solver), AddressKind::IPv4))
+                                .map(|ps| (SolverKind::from(&ps.solver), AddressKind::IPv6))
                                 .collect_vec()
                                 .into_iter(),
-                            _ => vec![(s, AddressKind::IPv4)]
+                            _ => vec![(s, AddressKind::IPv6)]
                                 .into_iter()
                                 .collect_vec()
                                 .into_iter(),
