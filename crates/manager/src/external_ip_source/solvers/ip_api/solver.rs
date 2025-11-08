@@ -89,6 +89,10 @@ impl Solver for IpApiSolver {
                 {
                     // Exponential backoff
                     let new_timeout = (cached.timeout * 2).min(RATELIMIT_BACKOFF_DURATION_MAX);
+                    debug!(
+                        msg = "hit rate limit repeatedly, backing off exponentially",
+                        backoff_secs = new_timeout.as_secs()
+                    );
                     let mut exp_cache =
                         IpProviderResponse::new(new_timeout, cached.response.clone());
                     exp_cache.timeout = new_timeout;
