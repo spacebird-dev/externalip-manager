@@ -51,12 +51,7 @@ impl IpProvider for MyIp {
             Err(e) => return IpProviderResponse::new(CACHE_DURATION, Err(e.into())),
         };
         if res.status() == StatusCode::TOO_MANY_REQUESTS {
-            return IpProviderResponse::new(
-                CACHE_DURATION,
-                Err(IpProviderError::RateLimited {
-                    remaining: CACHE_DURATION,
-                }),
-            );
+            return IpProviderResponse::new(CACHE_DURATION, Err(IpProviderError::RateLimited));
         }
         let body = match res.error_for_status() {
             Ok(body) => body,

@@ -3,7 +3,7 @@ use std::{fmt::Debug, time::Duration};
 use async_trait::async_trait;
 use k8s_openapi::api::core::v1::Service;
 use reqwest::Client;
-use tracing::{info, instrument};
+use tracing::{debug, info, instrument};
 
 use crate::{
     crd::v1alpha1,
@@ -72,7 +72,8 @@ impl Solver for IpApiSolver {
                     return Ok(addrs.clone());
                 }
                 Err(e) => {
-                    if matches!(e, IpProviderError::RateLimited { remaining: _ }) {
+                    if matches!(e, IpProviderError::RateLimited) {
+                        debug!(msg = "respecting cached ratelimit response", resp = ?e);
                         return Err(e.into());
                     }
                 }
@@ -82,27 +83,18 @@ impl Solver for IpApiSolver {
         let resp = self.inner.get_addresses(kind, &self.client).await;
         let (res, cache) = match &resp.response {
             Ok(addrs) => (Ok(addrs.clone()), Some(resp.clone())),
-            Err(e) if matches!(e, IpProviderError::RateLimited { remaining: _ }) => {
+            Err(e) if matches!(e, IpProviderError::RateLimited) => {
                 if let Some(cached) = &self.cache
-                    && matches!(
-                        &cached.response,
-                        Err(IpProviderError::RateLimited { remaining: _ })
-                    )
+                    && matches!(&cached.response, Err(IpProviderError::RateLimited))
                 {
                     // Exponential backoff
                     let new_timeout = (cached.timeout * 2).min(RATELIMIT_BACKOFF_DURATION_MAX);
                     let mut exp_cache =
                         IpProviderResponse::new(new_timeout, cached.response.clone());
                     exp_cache.timeout = new_timeout;
-                    (
-                        Err(IpProviderError::RateLimited {
-                            remaining: new_timeout,
-                        }
-                        .into()),
-                        Some(exp_cache),
-                    )
+                    (Err(IpProviderError::RateLimited.into()), Some(exp_cache))
                 } else {
-                    (Err(e.into()), None)
+                    (Err(e.into()), Some(resp.clone()))
                 }
             }
             Err(e) => (Err(e.into()), None),
@@ -190,12 +182,7 @@ mod tests {
     #[tokio::test]
     async fn errors_on_ratelimit() -> Result<()> {
         let mut solv = IpApiSolver::with_test_provider(Box::new(MockSolver::new(vec![
-            IpProviderResponse::new(
-                CACHE_TIMEOUT,
-                Err(IpProviderError::RateLimited {
-                    remaining: CACHE_TIMEOUT,
-                }),
-            ),
+            IpProviderResponse::new(CACHE_TIMEOUT, Err(IpProviderError::RateLimited)),
         ])));
         let result = solv
             .get_addresses(AddressKind::IPv4, &Service::default())
@@ -208,12 +195,7 @@ mod tests {
     async fn waits_after_ratelimit() -> Result<()> {
         let expected = vec!["0.0.0.0".parse().unwrap()];
         let mut solv = IpApiSolver::with_test_provider(Box::new(MockSolver::new(vec![
-            IpProviderResponse::new(
-                CACHE_TIMEOUT,
-                Err(IpProviderError::RateLimited {
-                    remaining: CACHE_TIMEOUT,
-                }),
-            ),
+            IpProviderResponse::new(CACHE_TIMEOUT, Err(IpProviderError::RateLimited)),
             IpProviderResponse::new(CACHE_TIMEOUT, Ok(expected.clone())),
         ])));
         let result = solv
@@ -238,18 +220,8 @@ mod tests {
     async fn exponential_backoff_on_repeated_ratelimit() -> Result<()> {
         let expected = vec!["0.0.0.0".parse().unwrap()];
         let mut solv = IpApiSolver::with_test_provider(Box::new(MockSolver::new(vec![
-            IpProviderResponse::new(
-                CACHE_TIMEOUT,
-                Err(IpProviderError::RateLimited {
-                    remaining: CACHE_TIMEOUT,
-                }),
-            ),
-            IpProviderResponse::new(
-                CACHE_TIMEOUT,
-                Err(IpProviderError::RateLimited {
-                    remaining: CACHE_TIMEOUT,
-                }),
-            ),
+            IpProviderResponse::new(CACHE_TIMEOUT, Err(IpProviderError::RateLimited)),
+            IpProviderResponse::new(CACHE_TIMEOUT, Err(IpProviderError::RateLimited)),
             IpProviderResponse::new(CACHE_TIMEOUT, Ok(expected.clone())),
         ])));
         // Trigger ratelimit

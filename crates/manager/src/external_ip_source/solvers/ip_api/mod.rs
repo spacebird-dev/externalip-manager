@@ -19,8 +19,8 @@ use thiserror::Error;
 
 #[derive(Debug, Error, Clone)]
 pub enum IpProviderError {
-    #[error("rate limited by IP provider, backing off for {secs} seconds", secs = remaining.as_secs())]
-    RateLimited { remaining: Duration },
+    #[error("rate limited by IP provider")]
+    RateLimited,
     #[error("IP provider request failed: `{0}`")]
     RequestFailed(String),
     #[error("IP provider response is invalid: `{0}`")]
