@@ -97,7 +97,7 @@ impl Manager {
                     .expect("service should have name")
             );
             if let Err(e) = self.reconcile_svc(svc).await {
-                error!(msg = "failed to reconcile service", svc = svc_name);
+                error!(msg = "failed to reconcile service", svc = svc_name, err = ?e);
                 errors.push(e);
             }
         }
