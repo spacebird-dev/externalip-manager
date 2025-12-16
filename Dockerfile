@@ -1,4 +1,4 @@
-FROM rust:1.91-trixie AS builder
+FROM rust:1.92-trixie AS builder
 
 COPY . .
 RUN cargo build --release
