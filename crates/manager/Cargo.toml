@@ -6,7 +6,7 @@ description = "Main ExternalIP Operator Library"
 
 
 [dependencies]
-reqwest = { version = "0.12.12", default-features = false, features = [
+reqwest = { version = "0.13.0", default-features = false, features = [
     "rustls-tls",
     "http2",
     "charset",
