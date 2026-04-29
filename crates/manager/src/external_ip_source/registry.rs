@@ -43,6 +43,7 @@ impl IPSourceRegistry {
     pub async fn refresh(&mut self) -> Result<(), IpSourceError> {
         let cluster_eip_apiobjs = self.ceips_api.list(&ListParams::default()).await?;
 
+        #[allow(clippy::result_large_err)]
         let (ceips_list, errs): (Vec<_>, Vec<_>) = cluster_eip_apiobjs
             .iter()
             .map(|ceips| {

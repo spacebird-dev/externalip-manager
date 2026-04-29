@@ -112,6 +112,7 @@ impl Manager {
         let svc_id = format!("{}/{}", svc_namespace, svc_name);
         info!(msg = "processing service", service = svc_id);
 
+        #[allow(clippy::result_large_err)]
         let current_ips: Vec<IpAddr> = match svc
             .svc()
             .spec
