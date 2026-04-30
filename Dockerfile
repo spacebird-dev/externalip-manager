@@ -1,9 +1,13 @@
-FROM rust:1.94-trixie AS builder
+FROM rust:1.95-bookworm AS builder
 
 COPY . .
 RUN cargo build --release
 
-FROM debian:trixie-slim
+FROM debian:bookworm-slim
+
+RUN apt update \
+    && apt -y install ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder target/release/externalip-manager /usr/local/bin/
 RUN chmod +x /usr/local/bin/externalip-manager
