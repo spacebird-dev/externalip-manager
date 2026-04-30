@@ -6,12 +6,13 @@ use thiserror::Error;
 
 use crate::{
     crd::v1alpha1,
-    external_ip_source::{IpSourceError, registry::SolverRegistry},
+    external_ip_source::{IpSourceError, registry::SolverRegistry, solvers::interface::Interface},
 };
 
 use super::AddressKind;
 
 mod dns_hostname;
+mod interface;
 mod ip_api;
 mod load_balancer_ingress;
 mod merge;
@@ -51,6 +52,10 @@ impl TryFrom<v1alpha1::SolverKind> for Box<dyn Solver> {
         match value {
             v1alpha1::SolverKind::IpAPI(ip_solver) => {
                 let boxed: Box<dyn Solver> = Box::new(IpApiSolver::new(ip_solver.provider));
+                Ok(boxed)
+            }
+            v1alpha1::SolverKind::Interface(interface_config) => {
+                let boxed: Box<dyn Solver> = Box::new(Interface::new(interface_config.name));
                 Ok(boxed)
             }
             v1alpha1::SolverKind::DnsHostname(dns_hostname) => {
