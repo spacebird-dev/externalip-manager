@@ -5,10 +5,10 @@ edition = "2024"
 description = "Utility crate to generate YAMLs for externalip-managers CRDs"
 
 [dependencies]
-clap = { version = "4.5.28", features = ["derive"] }
+clap = { version = "4.6.1", features = ["derive"] }
 externalip-manager-manager = { path = "../manager" }
 serde_yaml = "0.9.34"
-kube = { version = "2.0.1", features = ["runtime", "derive"] }
+kube = { version = "3.1.0", features = ["runtime", "derive"] }
 # Not actually used, just needed to get k8s_openapi to compile
-k8s-openapi = { version = "0.26.0", features = ["schemars", "v1_30"] }
-anyhow = "1.0.95"
+k8s-openapi = { version = "0.27.1", features = ["schemars", "v1_31"] }
+anyhow = "1.0.102"
