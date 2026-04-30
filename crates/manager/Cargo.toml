@@ -6,12 +6,7 @@ description = "Main ExternalIP Operator Library"
 
 
 [dependencies]
-reqwest = { version = "0.13.3", default-features = false, features = [
-    "rustls",
-    "http2",
-    "charset",
-    "json",
-] }
+reqwest = { version = "0.13.3", features = ["http2", "charset", "json"] }
 async-trait = "0.1.89"
 hickory-resolver = "0.25.2"
 itertools = "0.14.0"
