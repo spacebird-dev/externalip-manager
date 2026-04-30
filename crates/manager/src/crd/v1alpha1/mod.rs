@@ -70,6 +70,7 @@ impl From<PartialSolverKind> for SolverKind {
             PartialSolverKind::DnsHostname(c) => SolverKind::DnsHostname(c),
             PartialSolverKind::LoadBalancerIngress(c) => SolverKind::LoadBalancerIngress(c),
             PartialSolverKind::Static(c) => SolverKind::Static(c),
+            PartialSolverKind::Interface(c) => SolverKind::Interface(c),
         }
     }
 }
@@ -147,6 +148,8 @@ pub enum PartialSolverKind {
     /// Use a public "What-is-my-ip"-style service to deduce external IP addresses
     #[serde(rename = "ipAPI")]
     IpAPI(IpAPIConfig),
+    /// Use local interface addresses as the public IPs, such as with hostNetworking enabled
+    Interface(InterfaceConfig),
     /// Resolve a hostname through DNS and return the resulting A/AAAA records as IP addresses
     DnsHostname(DnsHostnameConfig),
     /// Use the ingress addresses assigned to the service in .status.loadBalancer.ingress as external IP addresses

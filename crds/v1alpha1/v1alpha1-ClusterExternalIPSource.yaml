@@ -105,6 +105,8 @@ spec:
                                     - required:
                                       - ipAPI
                                     - required:
+                                      - interface
+                                    - required:
                                       - dnsHostname
                                     - required:
                                       - loadBalancerIngress
@@ -119,6 +121,14 @@ spec:
                                             type: string
                                         required:
                                         - host
+                                        type: object
+                                      interface:
+                                        description: Use local interface addresses as the public IPs, such as with hostNetworking enabled
+                                        properties:
+                                          name:
+                                            description: Name of the network interface. If omitted, all interfaces are searched
+                                            nullable: true
+                                            type: string
                                         type: object
                                       ipAPI:
                                         description: Use a public "What-is-my-ip"-style service to deduce external IP addresses
@@ -254,6 +264,8 @@ spec:
                                     - required:
                                       - ipAPI
                                     - required:
+                                      - interface
+                                    - required:
                                       - dnsHostname
                                     - required:
                                       - loadBalancerIngress
@@ -268,6 +280,14 @@ spec:
                                             type: string
                                         required:
                                         - host
+                                        type: object
+                                      interface:
+                                        description: Use local interface addresses as the public IPs, such as with hostNetworking enabled
+                                        properties:
+                                          name:
+                                            description: Name of the network interface. If omitted, all interfaces are searched
+                                            nullable: true
+                                            type: string
                                         type: object
                                       ipAPI:
                                         description: Use a public "What-is-my-ip"-style service to deduce external IP addresses
