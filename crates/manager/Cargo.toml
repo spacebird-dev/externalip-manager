@@ -23,6 +23,7 @@ serde_json = "1.0.149"
 thiserror = "2.0.18"
 tokio = { version = "1.52.1", features = ["full"] }
 tracing = "0.1.44"
+getifs = "0.5.0"
 
 [dev-dependencies]
 anyhow = "1.0.102"

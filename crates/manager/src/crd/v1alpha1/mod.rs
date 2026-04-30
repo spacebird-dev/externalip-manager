@@ -52,6 +52,8 @@ pub enum SolverKind {
     /// Use a public "What-is-my-ip"-style service to deduce external IP addresses
     #[serde(rename = "ipAPI")]
     IpAPI(IpAPIConfig),
+    /// Use local interface addresses as the public IPs, such as with hostNetworking enabled
+    Interface(InterfaceConfig),
     /// Resolve a hostname through DNS and return the resulting A/AAAA records as IP addresses
     DnsHostname(DnsHostnameConfig),
     /// Use the ingress addresses assigned to the service in .status.loadBalancer.ingress as external IP addresses
@@ -100,6 +102,13 @@ pub enum IpSolverProvider {
     MyIp,
     // https://www.ipify.org/
     Ipify,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, Hash, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct InterfaceConfig {
+    /// Name of the network interface. If omitted, all interfaces are searched
+    pub name: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Copy, Clone, Debug, JsonSchema, Hash, PartialEq, Eq)]

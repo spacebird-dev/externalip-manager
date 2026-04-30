@@ -86,6 +86,8 @@ The following solvers are currently available:
 - `loadBalancerIngress`: Use the addresses specified in the `.status.loadBalancer.ingress` field
   - Use case: You have MetalLB or a similar LoadBalancer providing you with some public addresses
   - Parameters: None
+- `interface`: Use the addresses assigned to interfaces on the node. You can optionally specify the interface `name`, else all public addresses will be used.
+  - This requires the pod to run with `hostNetworking` set to `true`.
 - `static`: Just return a set of fixed IP addresses. Useful as a fallback or when used in combination with `merge`
 - `merge`: Create an IP address by merging parts of different IP addresses together. Useful when you have an external network prefix that differs from your node one, such as with NPTv6.
   - This meta-solver queries several sub-solver and then merges their results based on a supplied netmask.
