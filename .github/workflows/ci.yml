@@ -26,7 +26,7 @@ jobs:
       - name: Enable cargo caching
         uses: Swatinem/rust-cache@v2
 
-      - uses: extractions/setup-just@v3
+      - uses: extractions/setup-just@v4
         with:
           just-version: '1.39.0'
 
@@ -62,7 +62,7 @@ jobs:
         uses: taiki-e/install-action@v2
         with:
           tool: cross@0.2.5
-      - uses: extractions/setup-just@v3
+      - uses: extractions/setup-just@v4
         with:
           just-version: '1.39.0'
 
