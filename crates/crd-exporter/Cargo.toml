@@ -10,5 +10,5 @@ externalip-manager-manager = { path = "../manager" }
 serde_yaml = "0.9.34"
 kube = { version = "3.1.0", features = ["runtime", "derive"] }
 # Not actually used, just needed to get k8s_openapi to compile
-k8s-openapi = { version = "0.27.1", features = ["schemars", "v1_31"] }
+k8s-openapi = { version = "0.28.0", features = ["schemars", "v1_31"] }
 anyhow = "1.0.102"
