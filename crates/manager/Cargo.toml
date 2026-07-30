@@ -6,27 +6,27 @@ description = "Main ExternalIP Operator Library"
 
 
 [dependencies]
-reqwest = { version = "0.13.3", features = ["http2", "charset", "json"] }
-async-trait = "0.1.89"
-hickory-resolver = "0.26.0"
+reqwest = { version = "0.13.4", features = ["http2", "charset", "json"] }
+async-trait = "0.1.91"
+hickory-resolver = "0.26.1"
 itertools = "0.15.0"
-k8s-openapi = { version = "0.27.1", features = ["schemars"] }
-kube = { version = "3.1.0", features = [
+k8s-openapi = { version = "0.28.0", features = ["schemars"] }
+kube = { version = "4.2.0", features = [
     "runtime",
     "derive",
     "client",
     "rustls-tls",
     "aws-lc-rs",
 ] }
-schemars = "1.2.1"
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.149"
-thiserror = "2.0.18"
-tokio = { version = "1.52.1", features = ["full"] }
+schemars = "1.2.2"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+thiserror = "2.0.19"
+tokio = { version = "1.53.1", features = ["full"] }
 tracing = "0.1.44"
-getifs = "0.6.0"
+getifs = "0.6.1"
 
 [dev-dependencies]
-anyhow = "1.0.102"
+anyhow = "1.0.104"
 # we do enable a specific version for dev, so that tests can run
-k8s-openapi = { version = "0.27.1", features = ["schemars", "v1_31"] }
+k8s-openapi = { version = "0.28.0", features = ["schemars", "v1_32"] }
