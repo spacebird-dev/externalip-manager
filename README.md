@@ -1,35 +1,33 @@
 # externalip-manager
 
-A Kubernetes operator to manage the `externalIP` field on Kubernetes services.
-
-## Background
-
-Today, many k8s clusters are deployed in private networks behind NATs, with only Ingress services exposed through port forwards.
-This poses a problem for applications that need to know the external IP address of such a service, such as [`external-dns`](https://github.com/kubernetes-sigs/external-dns).
-Within a private cluster, only the private network IPs will be available, requiring the use of workarounds to obtain the true publicly reachable IP address.
-
-Kubernetes does have a built-in solution for this - the [`externalIP` field](https://kubernetes.io/docs/concepts/services-networking/service/#external-ips) present on all services:
+A Kubernetes operator to resolve and inject public/external IP addresses for your k8s services running in a private network.
+This was created to allow apps like [`external-dns`](https://github.com/kubernetes-sigs/external-dns) to see the "true" public IP addresses of a service that is behind a NAT/NPT setup.
+`externalip-manager` manages this by first resolving, then injecting the public IPs of a service into the services [`externalIP` field](https://kubernetes.io/docs/concepts/services-networking/service/#external-ips).
+This field is read by apps like `external-dns` and most Ingress/Gateway API controllers, such as `ingress-nginx` and `istio`:
 
 ```yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: my-service
+  annotations:
+    # 👇 see below, this is how externalip-manager discovers the external IPs
+    externalip.spacebird.dev/cluster-external-ip-source: my-source
 spec:
-  selector:
-    app.kubernetes.io/name: MyApp
-  ports:
-    - port: 80
-  externalIPs:
-    - 198.51.100.32
+  type: LoadBalancer
+  externalIPs: 
+    - 198.51.100.32 
+    - "2001:db8:dead:beef::1"
+    # 👆 the true external IP(s), injected by externalIP and read by external-dns + Ingress/GW
+status:
+  loadBalancer:
+    ingress:
+      # 👇 IP address assigned by MetalLB or similar
+      - ip: "10.47.10.5" 
 ```
 
-This field can inform applications about the true public/external IP of the service (for example, external-dns uses these IPs for its DNS records).
-However, there is a catch, as mentioned in the [documentation](https://kubernetes.io/docs/concepts/services-networking/service/#external-ips):
-
-> Kubernetes does not manage allocation of externalIPs; these are the responsibility of the cluster administrator.
-
-This is where `externalip-manager` comes in.
+Note: Although the `externalIPs` field has been [deprecated](https://github.com/kubernetes/enhancements/blob/master/keps/sig-network/5707-deprecate-service-externalips/README.md), this does not affect `externalip-manager`.
+The deprecation will cause warnings to be emitted, but the field won't be removed from the API, so as long as the upstream services like `external-dns` read it, this will continue to work.
 
 ## Overview
 
